@@ -1,0 +1,5 @@
+C:\Users\iuliu\Desktop\ATOOS\ATOOS\CodeAnalyzerWPF\obj\Debug\ATOOS.csprojResolveAssemblyReference.cache
+C:\Users\iuliu\Desktop\ATOOS\ATOOS\CodeAnalyzerWPF\obj\Debug\MainWindow.g.cs
+C:\Users\iuliu\Desktop\ATOOS\ATOOS\CodeAnalyzerWPF\obj\Debug\App.g.cs
+C:\Users\iuliu\Desktop\ATOOS\ATOOS\CodeAnalyzerWPF\obj\Debug\ATOOS_MarkupCompile.cache
+C:\Users\iuliu\Desktop\ATOOS\ATOOS\CodeAnalyzerWPF\obj\Debug\ATOOS_MarkupCompile.lref

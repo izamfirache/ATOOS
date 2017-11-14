@@ -1,0 +1,6 @@
+C:\disertation\ATOOS\ATOOS.Core\obj\Debug\ATOOS.Core.csproj.CoreCompileInputs.cache
+C:\disertation\ATOOS\ATOOS.Core\bin\Debug\ATOOS.Core.dll
+C:\disertation\ATOOS\ATOOS.Core\bin\Debug\ATOOS.Core.pdb
+C:\disertation\ATOOS\ATOOS.Core\obj\Debug\ATOOS.Core.dll
+C:\disertation\ATOOS\ATOOS.Core\obj\Debug\ATOOS.Core.pdb
+C:\disertation\ATOOS\ATOOS.Core\obj\Debug\ATOOS.Core.csprojResolveAssemblyReference.cache
