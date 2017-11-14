@@ -15,8 +15,8 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"c:\projects\HM-Final\HeuristicMethodsProject\HeuristicMethodsProject.sln";
-            projectName.Text = "HeuristicMethodsProject";
+            solutionPath.Text = @"";
+            projectName.Text = "";
         }
 
         private void analyzeSolution_Click(object sender, RoutedEventArgs e)
