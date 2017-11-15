@@ -11,19 +11,18 @@ namespace SolutionAnalyzer
 {
     public class ProjectAnalyzer
     {
-        private List<Class> _discoveredClasses;
         private string _pathToSolution;
         private string _projectName;
 
-        public ProjectAnalyzer(string pathToSolution, string projectName, List<Class> discoveredClasses)
+        public ProjectAnalyzer(string pathToSolution, string projectName)
         {
             _pathToSolution = pathToSolution;
             _projectName = projectName;
-            _discoveredClasses = discoveredClasses;
         }
 
         public List<Class> AnalyzeProject()
         {
+            var discoveredClasses = new List<Class>();
             var basicMetricsProvider = new BasicMetricsProvider();
             var sampleToAnalyzeCompilation = GetCompiledAssembly();
             var projectClasses = basicMetricsProvider.GetProjectClasses(sampleToAnalyzeCompilation);
@@ -88,10 +87,10 @@ namespace SolutionAnalyzer
                     });
                 }
 
-                _discoveredClasses.Add(newClass);
+                discoveredClasses.Add(newClass);
             }
 
-            return _discoveredClasses;
+            return discoveredClasses;
         }
 
         private Compilation GetCompiledAssembly()

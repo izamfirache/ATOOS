@@ -1,9 +1,12 @@
 ﻿using ATOOS.Core.Models;
+using DependencyResolver;
+using Newtonsoft.Json;
 using SolutionAnalyzer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
+using Unity;
 
 namespace ATOOS
 {
@@ -25,7 +28,7 @@ namespace ATOOS
             watch.Start();
 
             List<Class> discoveredClasses = new List<Class>();
-            var projectAnalyzer = new ProjectAnalyzer(solutionPath.Text, projectName.Text, discoveredClasses);
+            var projectAnalyzer = new ProjectAnalyzer(solutionPath.Text, projectName.Text);
 
             if (!string.IsNullOrEmpty(solutionPath.Text) && !string.IsNullOrEmpty(projectName.Text))
             {
@@ -116,6 +119,25 @@ namespace ATOOS
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             resultBox.Document.Blocks.Clear();
+            resolveTypeResult.Document.Blocks.Clear();
+        }
+
+        private void Button_Click_2(object sender, RoutedEventArgs e)
+        {
+            // discover all solution type and register them in the unity container
+            Resolver resolver = new Resolver();
+            UnityDependencyResolver _unityDependencyResolver;
+            UnityContainer _unityContainer = new UnityContainer();
+            _unityContainer = resolver.DiscoverAllSolutionTypes(solutionPath.Text, projectName.Text);
+            _unityDependencyResolver = new UnityDependencyResolver(_unityContainer);
+        }
+
+        private void Button_Click_3(object sender, RoutedEventArgs e)
+        {
+            // resolve type -- it will be shown in json format
+            //var instance = _unityDependencyResolver.ResolveCustomType(resolveTypeName.Text);
+
+            //resolveTypeResult.AppendText(JsonConvert.SerializeObject(instance));
         }
     }
 }

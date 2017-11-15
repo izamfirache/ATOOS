@@ -1,12 +1,13 @@
 ﻿<Window x:Class="ATOOS.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MainWindow" Height="800" Width="800">
-    <Grid x:Name="ATOOS" Background="{DynamicResource {x:Static SystemColors.AppWorkspaceBrushKey}}" Margin="0,0,-334,-89">
+        Title="MainWindow" ResizeMode="NoResize"  
+        WindowStartupLocation="CenterScreen" WindowState="Maximized">
+    <Grid x:Name="ATOOS" Background="{DynamicResource {x:Static SystemColors.AppWorkspaceBrushKey}}" Margin="0,0,-1099.4,-397.4">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <RichTextBox x:Name="resultBox" HorizontalAlignment="Left" Height="446" Margin="40,42,0,0" VerticalAlignment="Top" Width="990" RenderTransformOrigin="0.849,0.507" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Visible" FontSize="16">
+        <RichTextBox x:Name="resultBox" HorizontalAlignment="Left" Height="446" Margin="40,42,0,0" VerticalAlignment="Top" Width="565" RenderTransformOrigin="0.849,0.507" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Visible" FontSize="16">
             <FlowDocument>
                 <Paragraph>
                     <Run Text=""/>
@@ -16,13 +17,23 @@
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Label x:Name="label" Content="Path to solution:" HorizontalAlignment="Left" Margin="10,493,0,0" VerticalAlignment="Top" Width="155" FontSize="20" RenderTransformOrigin="0.492,-0.093"/>
-        <Label x:Name="label1" Content="Project name:" HorizontalAlignment="Left" Margin="10,526,0,0" VerticalAlignment="Top" FontSize="20"/>
-        <TextBox x:Name="solutionPath" HorizontalAlignment="Left" Height="22" Margin="165,501,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="865"/>
-        <TextBox x:Name="projectName" HorizontalAlignment="Left" Height="22" Margin="165,535,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="204" RenderTransformOrigin="0.457,2.173"/>
-        <Button x:Name="analyzeSolution" Content="Analyze project" HorizontalAlignment="Left" Margin="393,535,0,0" VerticalAlignment="Top" Width="134" Height="28" FontSize="15" Click="analyzeSolution_Click"/>
-        <Button Content="exit" HorizontalAlignment="Left" Margin="987,538,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click"/>
-        <Button Content="clear" HorizontalAlignment="Left" Margin="987,563,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click_1"/>
+        <Label x:Name="label" Content="Path to solution:" HorizontalAlignment="Left" Margin="10,507,0,0" VerticalAlignment="Top" Width="155" FontSize="20" RenderTransformOrigin="0.492,-0.093"/>
+        <Label x:Name="label1" Content="Project name:" HorizontalAlignment="Left" Margin="10,544,0,0" VerticalAlignment="Top" FontSize="20"/>
+        <TextBox x:Name="solutionPath" HorizontalAlignment="Left" Height="53" Margin="165,501,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="440"/>
+        <TextBox x:Name="projectName" HorizontalAlignment="Left" Height="22" Margin="165,559,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="440" RenderTransformOrigin="0.457,2.173"/>
+        <Button x:Name="analyzeSolution" Content="Analyze project" HorizontalAlignment="Left" Margin="165,586,0,0" VerticalAlignment="Top" Width="134" Height="28" FontSize="15" Click="analyzeSolution_Click"/>
+        <Button Content="exit" HorizontalAlignment="Left" Margin="562,595,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click"/>
+        <Button Content="clear" HorizontalAlignment="Left" Margin="512,595,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click_1"/>
+        <Button Content="Discover Solution Types" HorizontalAlignment="Left" Margin="670,285,0,0" VerticalAlignment="Top" Width="224" Height="46" Click="Button_Click_2" FontSize="18"/>
+        <RichTextBox x:Name="resolveTypeResult" HorizontalAlignment="Left" Height="289" Margin="899,42,0,0" VerticalAlignment="Top" Width="456">
+            <FlowDocument>
+                <Paragraph>
+                    <Run Text=""/>
+                </Paragraph>
+            </FlowDocument>
+        </RichTextBox>
+        <Button Content="Resolve Solution Type" HorizontalAlignment="Left" Margin="670,336,0,0" VerticalAlignment="Top" Width="224" Height="47" FontSize="18" Click="Button_Click_3"/>
+        <TextBox x:Name="resolveTypeName" HorizontalAlignment="Left" Height="47" Margin="899,336,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="456"/>
 
     </Grid>
 </Window>
