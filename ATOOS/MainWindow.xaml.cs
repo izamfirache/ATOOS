@@ -5,8 +5,8 @@ using SolutionAnalyzer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
-using Unity;
 
 namespace ATOOS
 {
@@ -15,14 +15,15 @@ namespace ATOOS
     /// </summary>
     public partial class MainWindow : Window
     {
+        private Resolver _resolver = new Resolver();
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"";
-            projectName.Text = "";
+            solutionPath.Text = @"c:\dev\TestProject\TestProject.sln";
+            projectName.Text = "TestProject";
         }
 
-        private void analyzeSolution_Click(object sender, RoutedEventArgs e)
+        private void AnalyzeSolution_Click(object sender, RoutedEventArgs e)
         {
             var watch = new Stopwatch();
             watch.Start();
@@ -125,19 +126,14 @@ namespace ATOOS
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
             // discover all solution type and register them in the unity container
-            Resolver resolver = new Resolver();
-            UnityDependencyResolver _unityDependencyResolver;
-            UnityContainer _unityContainer = new UnityContainer();
-            _unityContainer = resolver.DiscoverAllSolutionTypes(solutionPath.Text, projectName.Text);
-            _unityDependencyResolver = new UnityDependencyResolver(_unityContainer);
+            _resolver.DiscoverAllSolutionTypes(solutionPath.Text, projectName.Text);
         }
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
         {
             // resolve type -- it will be shown in json format
-            //var instance = _unityDependencyResolver.ResolveCustomType(resolveTypeName.Text);
-
-            //resolveTypeResult.AppendText(JsonConvert.SerializeObject(instance));
+            _resolver._instances.TryGetValue(resolveTypeName.Text, out object instance);
+            resolveTypeResult.AppendText(JsonConvert.SerializeObject(instance, Formatting.Indented));
         }
     }
 }

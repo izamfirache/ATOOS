@@ -21,7 +21,7 @@
         <Label x:Name="label1" Content="Project name:" HorizontalAlignment="Left" Margin="10,544,0,0" VerticalAlignment="Top" FontSize="20"/>
         <TextBox x:Name="solutionPath" HorizontalAlignment="Left" Height="53" Margin="165,501,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="440"/>
         <TextBox x:Name="projectName" HorizontalAlignment="Left" Height="22" Margin="165,559,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="440" RenderTransformOrigin="0.457,2.173"/>
-        <Button x:Name="analyzeSolution" Content="Analyze project" HorizontalAlignment="Left" Margin="165,586,0,0" VerticalAlignment="Top" Width="134" Height="28" FontSize="15" Click="analyzeSolution_Click"/>
+        <Button x:Name="analyzeSolution" Content="Analyze project" HorizontalAlignment="Left" Margin="165,586,0,0" VerticalAlignment="Top" Width="134" Height="28" FontSize="15" Click="AnalyzeSolution_Click"/>
         <Button Content="exit" HorizontalAlignment="Left" Margin="562,595,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click"/>
         <Button Content="clear" HorizontalAlignment="Left" Margin="512,595,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click_1"/>
         <Button Content="Discover Solution Types" HorizontalAlignment="Left" Margin="670,285,0,0" VerticalAlignment="Top" Width="224" Height="46" Click="Button_Click_2" FontSize="18"/>

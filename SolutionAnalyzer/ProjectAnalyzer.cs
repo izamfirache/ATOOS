@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ATOOS.Core.Models;
+using System.Threading.Tasks;
 
 namespace SolutionAnalyzer
 {
@@ -93,6 +94,14 @@ namespace SolutionAnalyzer
             return discoveredClasses;
         }
 
+        public string GetProjectoutputPath()
+        {
+            Solution solutionToAnalyze = GetSolution(_pathToSolution);
+            Project sampleProjectToAnalyze = solutionToAnalyze.Projects.Where((proj) => proj.Name == _projectName).First();
+
+            return sampleProjectToAnalyze.OutputFilePath;
+        }
+
         private Compilation GetCompiledAssembly()
         {
             Solution solutionToAnalyze = GetSolution(_pathToSolution);
@@ -110,7 +119,7 @@ namespace SolutionAnalyzer
         {
             // start Roslyn workspace
             MSBuildWorkspace workspace = MSBuildWorkspace.Create();
-
+            
             // open solution we want to analyze
             Solution solutionToAnalyze = workspace.OpenSolutionAsync(pathToSolution).Result;
 

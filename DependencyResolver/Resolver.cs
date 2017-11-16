@@ -1,69 +1,102 @@
 ﻿using ATOOS.Core.Models;
+using Microsoft.CodeAnalysis;
 using SolutionAnalyzer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Unity;
 
 namespace DependencyResolver
 {
     public class Resolver
     {
-        public UnityContainer DiscoverAllSolutionTypes(string solutionPath, string projectName)
-        {
-            UnityContainer unityContainer = new UnityContainer();
+        public Dictionary<string, object> _instances = new Dictionary<string, object>();
+        private Type[] _dllExportedTypes = new Type[100];
+        private string _outputProjectPath;
 
+        public void DiscoverAllSolutionTypes(string solutionPath, string projectName)
+        {
             // discover all solution classes
             var solutionAnalyzer = new ProjectAnalyzer(solutionPath, projectName);
             var discoveredClasses = solutionAnalyzer.AnalyzeProject();
+            _outputProjectPath = solutionAnalyzer.GetProjectoutputPath();
+
+            var dll = Assembly.LoadFile(_outputProjectPath); // TODO: test if it is a DLL
+            _dllExportedTypes = dll.GetExportedTypes();
 
             foreach (Class cls in discoveredClasses)
             {
-                Type classType = Type.GetType(cls.Name);
+                Type classType = null;
+                foreach (Type type in _dllExportedTypes)
+                {
+                    if(type.Name == cls.Name)
+                    {
+                        classType = type;
+                        break;
+                    }
+                }
 
-                // having the constructor signature, create a new instance of that object
-                var classInstance = CreateNewInstance(cls.Constructor, classType, discoveredClasses);
-
-                // register the type in the unity container
-                unityContainer.RegisterInstance(classType, cls.Name, classInstance);
+                if (cls.Constructor != null)
+                {
+                    // having the constructor signature, create a new instance of that object
+                    var classInstance = CreateNewInstance(cls.Constructor, classType, discoveredClasses);
+                    _instances.Add(cls.Name, classInstance);
+                }
+                else
+                {
+                    // no constructor
+                    var classInstance = CreateDefaultInstance(classType);
+                    _instances.Add(cls.Name, classInstance);
+                }
             }
-
-            return unityContainer;
         }
-
+        private object CreateDefaultInstance(Type classType)
+        {
+            Object instance = Activator.CreateInstance(classType);
+            return instance;
+        }
         private object CreateNewInstance(Constructor constructor, Type classType, List<Class> discoveredClasses)
         {
-            Object[] parameters = new Object[constructor.Parameters.Count];
+            List<object> parameters = new List<object>();
             int index = 0;
             foreach(MethodParameter mp in constructor.Parameters)
             {
                 switch (mp.Type)
                 {
-                    case "String":
+                    case "string":
                         string str = GetRandomString();
-                        parameters[index] = str;
+                        parameters.Add(str);
                         break;
                     case "int":
                         int nr = GetRandomInteger();
-                        parameters[index] = nr;
+                        parameters.Add(nr);
                         break;
                     default:
                         // find the type in the discoveredClasses
-                        Class cls = discoveredClasses.Where(c => c.Name == mp.Name).FirstOrDefault();
+                        Class cls = discoveredClasses.Where(c => c.Name == mp.Type).FirstOrDefault();
 
                         // if found, resolve the type
                         if (cls != null)
                         {
-                            Type clsType = Type.GetType(cls.Name);
-                            var customType = CreateNewInstance(cls.Constructor, clsType, discoveredClasses);
-                            parameters[index] = customType;
+                            Type clsType = _dllExportedTypes.Where(t => t.Name == cls.Name).FirstOrDefault();
+                            if (cls.Constructor != null)
+                            {
+                                var customType = CreateNewInstance(cls.Constructor, clsType, discoveredClasses);
+                                parameters.Add(customType);
+                            }
+                            else
+                            {
+                                var customType = CreateDefaultInstance(clsType);
+                                parameters.Add(customType);
+                            }
                         }
                         break;
                 }
+                index++;
             }
-            Object instance = Activator.CreateInstance(classType, parameters);
+            object instance = Activator.CreateInstance(classType, parameters.ToArray());
             return instance;
         }
 
