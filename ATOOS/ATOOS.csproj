@@ -208,13 +208,13 @@
       <Project>{65b45e7d-8fce-49a2-a991-5b86521e52e9}</Project>
       <Name>ATOOS.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DependencyResolver\DependencyResolver.csproj">
-      <Project>{2D04E73A-2FBE-4482-89A8-96D989775E89}</Project>
-      <Name>DependencyResolver</Name>
+    <ProjectReference Include="..\CodeAnalyzer\CodeAnalyzer.csproj">
+      <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
+      <Name>CodeAnalyzer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SolutionAnalyzer\SolutionAnalyzer.csproj">
-      <Project>{7d088f71-5632-4523-b8a5-f878db7226c7}</Project>
-      <Name>SolutionAnalyzer</Name>
+    <ProjectReference Include="..\DependencyResolver\DependencyResolver.csproj">
+      <Project>{3621a8e2-f1c8-43dd-a796-e16c8c9c4083}</Project>
+      <Name>DependencyResolver</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

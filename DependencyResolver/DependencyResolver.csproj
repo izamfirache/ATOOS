@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{2D04E73A-2FBE-4482-89A8-96D989775E89}</ProjectGuid>
+    <ProjectGuid>{3621A8E2-F1C8-43DD-A796-E16C8C9C4083}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DependencyResolver</RootNamespace>
@@ -143,17 +143,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Resolver.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ATOOS.Core\ATOOS.Core.csproj">
       <Project>{65b45e7d-8fce-49a2-a991-5b86521e52e9}</Project>
       <Name>ATOOS.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SolutionAnalyzer\SolutionAnalyzer.csproj">
-      <Project>{7D088F71-5632-4523-B8A5-F878DB7226C7}</Project>
-      <Name>SolutionAnalyzer</Name>
+    <ProjectReference Include="..\CodeAnalyzer\CodeAnalyzer.csproj">
+      <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
+      <Name>CodeAnalyzer</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

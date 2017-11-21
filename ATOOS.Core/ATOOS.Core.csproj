@@ -40,6 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\AnalyzedProject.cs" />
+    <Compile Include="Models\AnalyzedSolution.cs" />
     <Compile Include="Models\Atribute.cs" />
     <Compile Include="Models\Class.cs" />
     <Compile Include="Models\Constructor.cs" />

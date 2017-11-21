@@ -1,6 +1,5 @@
 ﻿using ATOOS.Core.Models;
 using Microsoft.CodeAnalysis;
-using SolutionAnalyzer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,41 +13,42 @@ namespace DependencyResolver
     {
         public Dictionary<string, object> _instances = new Dictionary<string, object>();
         private Type[] _dllExportedTypes = new Type[100];
-        private string _outputProjectPath;
 
         public void DiscoverAllSolutionTypes(string solutionPath, string projectName)
         {
             // discover all solution classes
-            var solutionAnalyzer = new ProjectAnalyzer(solutionPath, projectName);
-            var discoveredClasses = solutionAnalyzer.AnalyzeProject();
-            _outputProjectPath = solutionAnalyzer.GetProjectoutputPath();
+            var solutionAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath, projectName);
+            var analyedSolution = solutionAnalyzer.AnalyzeSolution();
 
-            var dll = Assembly.LoadFile(_outputProjectPath); // TODO: test if it is a DLL
-            _dllExportedTypes = dll.GetExportedTypes();
-
-            foreach (Class cls in discoveredClasses)
+            foreach (AnalyzedProject proj in analyedSolution.Projects)
             {
-                Type classType = null;
-                foreach (Type type in _dllExportedTypes)
-                {
-                    if(type.Name == cls.Name)
-                    {
-                        classType = type;
-                        break;
-                    }
-                }
+                var dll = Assembly.LoadFile(proj.OutputFilePath); // TODO: test if it is a DLL
+                _dllExportedTypes = dll.GetExportedTypes();
 
-                if (cls.Constructor != null)
+                foreach (Class cls in proj.Classes)
                 {
-                    // having the constructor signature, create a new instance of that object
-                    var classInstance = CreateNewInstance(cls.Constructor, classType, discoveredClasses);
-                    _instances.Add(cls.Name, classInstance);
-                }
-                else
-                {
-                    // no constructor
-                    var classInstance = CreateDefaultInstance(classType);
-                    _instances.Add(cls.Name, classInstance);
+                    Type classType = null;
+                    foreach (Type type in _dllExportedTypes)
+                    {
+                        if (type.Name == cls.Name)
+                        {
+                            classType = type;
+                            break;
+                        }
+                    }
+
+                    if (cls.Constructor != null)
+                    {
+                        // having the constructor signature, create a new instance of that object
+                        var classInstance = CreateNewInstance(cls.Constructor, classType, proj.Classes);
+                        _instances.Add(cls.Name, classInstance);
+                    }
+                    else
+                    {
+                        // no constructor
+                        var classInstance = CreateDefaultInstance(classType);
+                        _instances.Add(cls.Name, classInstance);
+                    }
                 }
             }
         }
