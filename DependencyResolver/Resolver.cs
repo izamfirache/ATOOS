@@ -14,10 +14,10 @@ namespace DependencyResolver
         public Dictionary<string, object> _instances = new Dictionary<string, object>();
         private Type[] _dllExportedTypes = new Type[100];
 
-        public void DiscoverAllSolutionTypes(string solutionPath, string projectName)
+        public void DiscoverAllSolutionTypes(string solutionPath)
         {
             // discover all solution classes
-            var solutionAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath, projectName);
+            var solutionAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath);
             var analyedSolution = solutionAnalyzer.AnalyzeSolution();
 
             foreach (AnalyzedProject proj in analyedSolution.Projects)
@@ -37,17 +37,20 @@ namespace DependencyResolver
                         }
                     }
 
-                    if (cls.Constructor != null)
+                    if (classType != null)
                     {
-                        // having the constructor signature, create a new instance of that object
-                        var classInstance = CreateNewInstance(cls.Constructor, classType, proj.Classes);
-                        _instances.Add(cls.Name, classInstance);
-                    }
-                    else
-                    {
-                        // no constructor
-                        var classInstance = CreateDefaultInstance(classType);
-                        _instances.Add(cls.Name, classInstance);
+                        if (cls.Constructor != null)
+                        {
+                            // having the constructor signature, create a new instance of that object
+                            var classInstance = CreateNewInstance(cls.Constructor, classType, proj.Classes);
+                            _instances.Add(cls.Name, classInstance);
+                        }
+                        else
+                        {
+                            // no constructor
+                            var classInstance = CreateDefaultInstance(classType);
+                            _instances.Add(cls.Name, classInstance);
+                        }
                     }
                 }
             }

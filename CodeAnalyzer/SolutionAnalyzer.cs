@@ -12,12 +12,10 @@ namespace CodeAnalyzer
     public class SolutionAnalyzer
     {
         private string _pathToSolution;
-        private string _projectName;
 
-        public SolutionAnalyzer(string pathToSolution, string projectName)
+        public SolutionAnalyzer(string pathToSolution)
         {
             _pathToSolution = pathToSolution;
-            _projectName = projectName;
         }
 
         public AnalyzedSolution AnalyzeSolution()
@@ -119,7 +117,7 @@ namespace CodeAnalyzer
         private Project GetProjectToAnalyze(Solution solution, string projectName)
         {
             // get the project we want to analyze out
-            Project projectToAnalyze = solution.Projects.Where((proj) => proj.Name == _projectName).First();
+            Project projectToAnalyze = solution.Projects.Where((proj) => proj.Name == projectName).First();
             return projectToAnalyze;
         }
 

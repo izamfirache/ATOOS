@@ -20,8 +20,7 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"c:\dev\TestProject\TestProject.sln";
-            projectName.Text = "TestProject";
+            solutionPath.Text = @"C:\Users\iuliu\Desktop\MSE_Sem2\HM-Final\HeuristicMethodsProject\HeuristicMethodsProject.sln";
         }
 
         private void AnalyzeSolution_Click(object sender, RoutedEventArgs e)
@@ -30,18 +29,19 @@ namespace ATOOS
             watch.Start();
 
             List<Class> discoveredClasses = new List<Class>();
-            var projectAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath.Text, projectName.Text);
+            var projectAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath.Text);
 
-            if (!string.IsNullOrEmpty(solutionPath.Text) && !string.IsNullOrEmpty(projectName.Text))
+            if (!string.IsNullOrEmpty(solutionPath.Text))
             {
                 var analyzedSolution = projectAnalyzer.AnalyzeSolution();
                 foreach (AnalyzedProject proj in analyzedSolution.Projects)
                 {
-                    resultBox.AppendText(string.Format("Project name: {0}\r", proj.Name));
+                    resultBox.AppendText(string.Format("Project OutputPath: {0}\r", proj.OutputFilePath));
+                    resultBox.AppendText(string.Format("Project name: {0}\r {1}", proj.Name, "{"));
                     foreach (var c in proj.Classes)
                     {
                         resultBox.AppendText(Environment.NewLine);
-                        resultBox.AppendText(string.Format("public class {0} {1}\r", c.Name, '{'));
+                        resultBox.AppendText(string.Format("\tpublic class {0} {1}\r", c.Name, '{'));
 
                         // constructor
                         var constructorSignature = "(";
@@ -66,7 +66,7 @@ namespace ATOOS
                         {
                             constructorSignature += ")";
                         }
-                        resultBox.AppendText(string.Format("\t public {0}{1};\r", c.Name, constructorSignature));
+                        resultBox.AppendText(string.Format("\t\t public {0}{1};\r", c.Name, constructorSignature));
 
                         // methods
                         foreach (var m in c.Methods)
@@ -93,16 +93,18 @@ namespace ATOOS
                             {
                                 methodSignature += ')';
                             }
-                            resultBox.AppendText(string.Format("\t {0} {1} {2}{3}; \r", m.Accessor, m.ReturnType, m.Name, methodSignature));
+                            resultBox.AppendText(string.Format("\t\t {0} {1} {2}{3}; \r", m.Accessor, m.ReturnType, m.Name, methodSignature));
                         }
 
                         // attributes
                         foreach (var a in c.Attributes)
                         {
-                            resultBox.AppendText(string.Format("\t {0} {1} {2}; \r", a.Accessor, a.Type, a.Name));
+                            resultBox.AppendText(string.Format("\t\t {0} {1} {2}; \r", a.Accessor, a.Type, a.Name));
                         }
-                        resultBox.AppendText("}");
+                        resultBox.AppendText("\t}\r");
                     }
+                    resultBox.AppendText("}\r");
+                    resultBox.AppendText("------------------------------------\r");
                 }
             }
             else
@@ -131,14 +133,16 @@ namespace ATOOS
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
             // discover all solution type and register them in the unity container
-            _resolver.DiscoverAllSolutionTypes(solutionPath.Text, projectName.Text);
+            _resolver.DiscoverAllSolutionTypes(solutionPath.Text);
+            MessageBox.Show("Done!");
         }
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
         {
             // resolve type -- it will be shown in json format
             _resolver._instances.TryGetValue(resolveTypeName.Text, out object instance);
-            resolveTypeResult.AppendText(JsonConvert.SerializeObject(instance, Formatting.Indented));
+            var jsonObj = JsonConvert.SerializeObject(instance, Formatting.Indented);
+            resolveTypeResult.AppendText(jsonObj);
         }
     }
 }
