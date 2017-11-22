@@ -17,12 +17,12 @@
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Label x:Name="label" Content="Path to solution:" HorizontalAlignment="Left" Margin="40,501,0,0" VerticalAlignment="Top" Width="115" FontSize="15" RenderTransformOrigin="0.492,-0.093"/>
-        <TextBox x:Name="solutionPath" HorizontalAlignment="Left" Height="37" Margin="165,501,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="440"/>
+        <Label x:Name="label" Content="Path to solution:" HorizontalAlignment="Left" Margin="40,504,0,0" VerticalAlignment="Top" Width="115" FontSize="15" RenderTransformOrigin="0.492,-0.093"/>
+        <TextBox x:Name="solutionPath" HorizontalAlignment="Left" Height="37" Margin="155,501,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="455"/>
         <Button x:Name="analyzeSolution" Content="Analyze solution" HorizontalAlignment="Left" Margin="610,501,0,0" VerticalAlignment="Top" Width="134" Height="37" FontSize="15" Click="AnalyzeSolution_Click"/>
         <Button Content="exit" HorizontalAlignment="Left" Margin="822,495,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click"/>
         <Button Content="clear" HorizontalAlignment="Left" Margin="822,513,0,0" VerticalAlignment="Top" Width="43" Click="Button_Click_1"/>
-        <Button Content="Discover Solution Types" HorizontalAlignment="Left" Margin="1033,388,0,0" VerticalAlignment="Top" Width="138" Height="28" Click="Button_Click_2" FontSize="12"/>
+        <Button Content="Discover Solution Types" HorizontalAlignment="Left" Margin="1217,387,0,0" VerticalAlignment="Top" Width="138" Height="28" Click="Button_Click_2" FontSize="12"/>
         <RichTextBox x:Name="resolveTypeResult" HorizontalAlignment="Left" Height="289" Margin="899,42,0,0" VerticalAlignment="Top" Width="456">
             <FlowDocument>
                 <Paragraph>
@@ -30,24 +30,25 @@
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Button Content="Resolve Solution Type" HorizontalAlignment="Left" Margin="899,388,0,0" VerticalAlignment="Top" Width="134" Height="27" FontSize="12" Click="Button_Click_3"/>
+        <Button Content="Resolve Solution Type" HorizontalAlignment="Left" Margin="1083,387,0,0" VerticalAlignment="Top" Width="134" Height="28" FontSize="12" Click="Button_Click_3"/>
         <TextBox x:Name="resolveTypeName" HorizontalAlignment="Left" Height="47" Margin="994,336,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="361"/>
         <Label Content="Dinamically invoke a function or the specified type" HorizontalAlignment="Left" Margin="899,428,0,0" VerticalAlignment="Top" Height="25" Width="298"/>
         <Label Content="Type name" HorizontalAlignment="Left" Margin="913,450,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.211,0.423" Width="90"/>
         <Label Content="Method name" HorizontalAlignment="Left" Margin="899,478,0,0" VerticalAlignment="Top" Width="90"/>
         <TextBox x:Name="invokeFuntionTypeName" HorizontalAlignment="Left" Height="23" Margin="989,453,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="182"/>
         <TextBox x:Name="invokeFunctionMethodName" HorizontalAlignment="Left" Height="23" Margin="989,481,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="182"/>
-        <RichTextBox x:Name="invokeFunctionResult" HorizontalAlignment="Left" Height="65" Margin="989,511,0,0" VerticalAlignment="Top" Width="182">
+        <RichTextBox x:Name="invokeFunctionResult" HorizontalAlignment="Left" Height="65" Margin="989,536,0,0" VerticalAlignment="Top" Width="182">
             <FlowDocument>
                 <Paragraph>
                     <Run Text=""/>
                 </Paragraph>
             </FlowDocument>
         </RichTextBox>
-        <Label Content="Result" HorizontalAlignment="Left" Margin="942,550,0,0" VerticalAlignment="Top" Width="46"/>
-        <Button Content="Invoke method" HorizontalAlignment="Left" Margin="1176,481,0,0" VerticalAlignment="Top" Width="104" Height="23" Click="Button_Click_4"/>
+        <Label Content="Result" HorizontalAlignment="Left" Margin="987,515,0,0" VerticalAlignment="Top" Width="46"/>
+        <Button Content="Invoke method" HorizontalAlignment="Left" Margin="1171,481,0,0" VerticalAlignment="Top" Width="104" Height="23" Click="Button_Click_4"/>
         <Label Content="Type to resolve" HorizontalAlignment="Left" Margin="899,348,0,0" VerticalAlignment="Top" Width="90"/>
         <Label Content="Discover all solution types and then choose a type to resolve" HorizontalAlignment="Left" Margin="899,19,0,0" VerticalAlignment="Top" Width="334"/>
+        <Button Content="clear" HorizontalAlignment="Left" Margin="1171,581,0,0" VerticalAlignment="Top" Width="39" Click="Button_Click_5"/>
 
     </Grid>
 </Window>

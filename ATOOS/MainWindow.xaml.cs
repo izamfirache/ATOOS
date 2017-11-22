@@ -20,7 +20,7 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"C:\Users\iuliu\Desktop\MSE_Sem2\HM-Final\HeuristicMethodsProject\HeuristicMethodsProject.sln";
+            solutionPath.Text = @"C:\Users\iuliu\Desktop\ATOOS\TestProject1\TestProject1.sln";
         }
 
         private void AnalyzeSolution_Click(object sender, RoutedEventArgs e)
@@ -139,10 +139,17 @@ namespace ATOOS
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
         {
-            // resolve type -- it will be shown in json format
-            _factory._instances.TryGetValue(resolveTypeName.Text, out object instance);
-            var jsonObj = JsonConvert.SerializeObject(instance, Formatting.None);
-            resolveTypeResult.AppendText(jsonObj);
+            if (_factory._instances.Count != 0)
+            {
+                // resolve type -- it will be shown in json format
+                _factory._instances.TryGetValue(resolveTypeName.Text, out object instance);
+                var jsonObj = JsonConvert.SerializeObject(instance, Formatting.None);
+                resolveTypeResult.AppendText(jsonObj);
+            }
+            else
+            {
+                MessageBox.Show("Press the Discover solution types button first.");
+            }
         }
 
         private void Button_Click_4(object sender, RoutedEventArgs e)
@@ -160,6 +167,11 @@ namespace ATOOS
             {
                 MessageBox.Show("Press the Discover solution types button first.");
             }
+        }
+
+        private void Button_Click_5(object sender, RoutedEventArgs e)
+        {
+            invokeFunctionResult.Document.Blocks.Clear();
         }
     }
 }

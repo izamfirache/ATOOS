@@ -43,7 +43,7 @@ namespace DynamicInvoke.Helpers
                                 var parameters = new List<object>();
                                 foreach(ParameterInfo p in methodParameters)
                                 {
-                                    var instance = ResolveParameter(p.GetType().ToString());
+                                    var instance = ResolveParameter(p.ParameterType.Name);
                                     parameters.Add(instance);
                                 }
 
@@ -64,9 +64,9 @@ namespace DynamicInvoke.Helpers
         {
             switch (typeToResolve)
             {
-                case "string":
+                case "String":
                     return GetRandomString();
-                case "int":
+                case "Int32":
                     return GetRandomInteger();
                 default: return null;
             }
