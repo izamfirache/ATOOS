@@ -1,13 +1,13 @@
 ﻿using ATOOS.Core.Models;
-using DependencyResolver;
 using Newtonsoft.Json;
-using SolutionAnalyzer;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using CodeAnalyzer;
+using ObjectFactory;
+using DynamicInvoke.Helpers;
 
 namespace ATOOS
 {
@@ -16,7 +16,7 @@ namespace ATOOS
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Resolver _resolver = new Resolver();
+        private Factory _factory = new Factory();
         public MainWindow()
         {
             InitializeComponent();
@@ -133,16 +133,33 @@ namespace ATOOS
         private void Button_Click_2(object sender, RoutedEventArgs e)
         {
             // discover all solution type and register them in the unity container
-            _resolver.DiscoverAllSolutionTypes(solutionPath.Text);
+            _factory.DiscoverAllSolutionTypes(solutionPath.Text);
             MessageBox.Show("Done!");
         }
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
         {
             // resolve type -- it will be shown in json format
-            _resolver._instances.TryGetValue(resolveTypeName.Text, out object instance);
-            var jsonObj = JsonConvert.SerializeObject(instance, Formatting.Indented);
+            _factory._instances.TryGetValue(resolveTypeName.Text, out object instance);
+            var jsonObj = JsonConvert.SerializeObject(instance, Formatting.None);
             resolveTypeResult.AppendText(jsonObj);
+        }
+
+        private void Button_Click_4(object sender, RoutedEventArgs e)
+        {
+            // invoke the specified method and display the result
+            if (_factory._instances.Count != 0)
+            {
+                var invokeFunctionHelper = new InvokeFunctionHelper(_factory);
+                var result = invokeFunctionHelper.DynamicallyInvokeFunction(solutionPath.Text,
+                    invokeFuntionTypeName.Text, invokeFunctionMethodName.Text);
+
+                invokeFunctionResult.AppendText(JsonConvert.SerializeObject(result, Formatting.None));
+            }
+            else
+            {
+                MessageBox.Show("Press the Discover solution types button first.");
+            }
         }
     }
 }

@@ -7,28 +7,28 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DependencyResolver
+namespace ObjectFactory
 {
-    public class Resolver
+    public class Factory
     {
         public Dictionary<string, object> _instances = new Dictionary<string, object>();
-        private Type[] _dllExportedTypes = new Type[100];
+        private Type[] _assemblyExportedTypes = new Type[100];
 
         public void DiscoverAllSolutionTypes(string solutionPath)
         {
-            // discover all solution classes
+            // discover all solution projects
             var solutionAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath);
             var analyedSolution = solutionAnalyzer.AnalyzeSolution();
 
             foreach (AnalyzedProject proj in analyedSolution.Projects)
             {
-                var dll = Assembly.LoadFile(proj.OutputFilePath); // TODO: test if it is a DLL
-                _dllExportedTypes = dll.GetExportedTypes();
+                var assembly = Assembly.LoadFile(proj.OutputFilePath);
+                _assemblyExportedTypes = assembly.GetExportedTypes();
 
                 foreach (Class cls in proj.Classes)
                 {
                     Type classType = null;
-                    foreach (Type type in _dllExportedTypes)
+                    foreach (Type type in _assemblyExportedTypes)
                     {
                         if (type.Name == cls.Name)
                         {
@@ -83,7 +83,7 @@ namespace DependencyResolver
                         // if found, resolve the type
                         if (cls != null)
                         {
-                            Type clsType = _dllExportedTypes.Where(t => t.Name == cls.Name).FirstOrDefault();
+                            Type clsType = _assemblyExportedTypes.Where(t => t.Name == cls.Name).FirstOrDefault();
                             if (cls.Constructor != null)
                             {
                                 var customType = CreateNewInstance(cls.Constructor, clsType, discoveredClasses);

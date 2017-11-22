@@ -168,8 +168,6 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="BasicMetricsProvider.cs" />
-    <Compile Include="ClassVisitor.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -212,9 +210,13 @@
       <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
       <Name>CodeAnalyzer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DependencyResolver\DependencyResolver.csproj">
+    <ProjectReference Include="..\DependencyResolver\ObjectFactory.csproj">
       <Project>{3621a8e2-f1c8-43dd-a796-e16c8c9c4083}</Project>
-      <Name>DependencyResolver</Name>
+      <Name>ObjectFactory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DynamicInvoke.Helpers\DynamicInvoke.Helpers.csproj">
+      <Project>{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}</Project>
+      <Name>DynamicInvoke.Helpers</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
