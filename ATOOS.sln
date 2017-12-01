@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjectFactory", "Dependency
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicInvoke.Helpers", "DynamicInvoke.Helpers\DynamicInvoke.Helpers.csproj", "{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeGenerationTestApp", "CodeGenerationTestApp\CodeGenerationTestApp.csproj", "{AF84B79D-7C3D-453A-A77C-4D2C1A077562}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF84B79D-7C3D-453A-A77C-4D2C1A077562}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF84B79D-7C3D-453A-A77C-4D2C1A077562}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF84B79D-7C3D-453A-A77C-4D2C1A077562}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF84B79D-7C3D-453A-A77C-4D2C1A077562}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
