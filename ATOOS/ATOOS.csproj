@@ -210,13 +210,13 @@
       <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
       <Name>CodeAnalyzer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DependencyResolver\ObjectFactory.csproj">
-      <Project>{3621a8e2-f1c8-43dd-a796-e16c8c9c4083}</Project>
-      <Name>ObjectFactory</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DynamicInvoke.Helpers\DynamicInvoke.Helpers.csproj">
       <Project>{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}</Project>
       <Name>DynamicInvoke.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ObjectFactory\ObjectFactory.csproj">
+      <Project>{0eacadb8-b848-4df0-bf51-ecade44eca08}</Project>
+      <Name>ObjectFactory</Name>
     </ProjectReference>
     <ProjectReference Include="..\UnitTestGenerator\UnitTestGenerator.Core.csproj">
       <Project>{f4c1a7a5-ad57-4440-9c75-9c54e1347b05}</Project>

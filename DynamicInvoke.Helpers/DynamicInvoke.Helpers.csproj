@@ -52,8 +52,8 @@
       <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
       <Name>CodeAnalyzer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DependencyResolver\ObjectFactory.csproj">
-      <Project>{3621a8e2-f1c8-43dd-a796-e16c8c9c4083}</Project>
+    <ProjectReference Include="..\ObjectFactory\ObjectFactory.csproj">
+      <Project>{0eacadb8-b848-4df0-bf51-ecade44eca08}</Project>
       <Name>ObjectFactory</Name>
     </ProjectReference>
   </ItemGroup>

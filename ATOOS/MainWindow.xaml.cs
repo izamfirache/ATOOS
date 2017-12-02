@@ -22,7 +22,7 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"C:\Users\iuliu\Desktop\ATOOS\TestProject1\TestProject1.sln";
+            solutionPath.Text = @"";
         }
 
         private void AnalyzeSolution_Click(object sender, RoutedEventArgs e)
@@ -184,6 +184,8 @@ namespace ATOOS
             {
                 var unitTestGenerator = new UnitTestGenerator.Core.UnitTestGenerator(unitTestDirectory, _factory);
                 unitTestGenerator.GenerateUnitTestsForClass(solutionPath.Text);
+
+                MessageBox.Show("Done. Check the UnitTests folder.");
             }
             else
             {
