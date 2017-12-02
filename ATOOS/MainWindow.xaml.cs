@@ -8,6 +8,8 @@ using System.Windows;
 using CodeAnalyzer;
 using ObjectFactory;
 using DynamicInvoke.Helpers;
+using UnitTestGenerator.Core;
+using System.IO;
 
 namespace ATOOS
 {
@@ -172,6 +174,23 @@ namespace ATOOS
         private void Button_Click_5(object sender, RoutedEventArgs e)
         {
             invokeFunctionResult.Document.Blocks.Clear();
+        }
+
+        private void Button_Click_6(object sender, RoutedEventArgs e)
+        {
+            var unitTestDirectory = @"";
+            
+            if (_factory._instances.Count != 0)
+            {
+                var unitTestGenerator = new UnitTestGenerator.Core.UnitTestGenerator(unitTestDirectory, _factory);
+                unitTestGenerator.GenerateUnitTestsForClass(solutionPath.Text);
+            }
+            else
+            {
+                MessageBox.Show("Press the Discover solution types button first.");
+            }
+
+            // runt the generated unit tests and display the result in resultBox
         }
     }
 }

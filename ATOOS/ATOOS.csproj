@@ -218,6 +218,10 @@
       <Project>{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}</Project>
       <Name>DynamicInvoke.Helpers</Name>
     </ProjectReference>
+    <ProjectReference Include="..\UnitTestGenerator\UnitTestGenerator.Core.csproj">
+      <Project>{f4c1a7a5-ad57-4440-9c75-9c54e1347b05}</Project>
+      <Name>UnitTestGenerator.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
