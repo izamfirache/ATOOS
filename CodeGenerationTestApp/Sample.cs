@@ -19,17 +19,17 @@ namespace CodeGenerationTestApp
         public void GenerateSampleDll()
         {
             // GENERATE A SAMPLE CLASS WITH METHODS AND ATTRIBUTES
+            var compileHelper = new CompileHelper();
             Initialize();
             AddFields();
             AddProperties();
             AddMethod();
             AddConstructor();
             AddEntryPoint();
-            GenerateCSharpCode();
+            compileHelper.GenerateCSharpCode(targetUnit, outputFileName);
 
             // COMPILE THE CLASS AND GENERATE A DLL
-            var compileHelper = new CompileHelper();
-            var isDllCompiled = compileHelper.CompileAsDLL("SampleCode.cs");
+            var isDllCompiled = compileHelper.CompileAsDLL("SampleCode.cs", new List<string>());
         }
 
         /// <summary>
@@ -56,10 +56,12 @@ namespace CodeGenerationTestApp
             targetUnit = new CodeCompileUnit();
             CodeNamespace samples = new CodeNamespace("CodeDOMSample");
             samples.Imports.Add(new CodeNamespaceImport("System"));
-            targetClass = new CodeTypeDeclaration("CodeDOMCreatedClass");
-            targetClass.IsClass = true;
-            targetClass.TypeAttributes =
-                TypeAttributes.Public | TypeAttributes.Sealed;
+            targetClass = new CodeTypeDeclaration("CodeDOMCreatedClass")
+            {
+                IsClass = true,
+                TypeAttributes =
+                TypeAttributes.Public | TypeAttributes.Sealed
+            };
             samples.Types.Add(targetClass);
             targetUnit.Namespaces.Add(samples);
         }
@@ -248,21 +250,6 @@ namespace CodeGenerationTestApp
                 new CodeTypeReferenceExpression("System.Console"),
                 "WriteLine", toStringInvoke));
             targetClass.Members.Add(start);
-        }
-        /// <summary>
-        /// Generate CSharp source code from the compile unit.
-        /// </summary>
-        /// <param name="filename">Output file name</param>
-        private void GenerateCSharpCode()
-        {
-            CodeDomProvider provider = CodeDomProvider.CreateProvider("CSharp");
-            CodeGeneratorOptions options = new CodeGeneratorOptions();
-            options.BracingStyle = "C";
-            using (StreamWriter sourceWriter = new StreamWriter(outputFileName))
-            {
-                provider.GenerateCodeFromCompileUnit(
-                    targetUnit, sourceWriter, options);
-            }
         }
     }
 }

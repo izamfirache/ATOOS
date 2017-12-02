@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,9 +12,29 @@ namespace CodeGenerationTestApp
 {
     public class CompileHelper
     {
-        public bool CompileAsDLL(string sourceName)
+        public void GenerateCSharpCode(CodeCompileUnit targetUnit, string outputFileName)
         {
-            FileInfo sourceFile = new FileInfo(sourceName);
+            CodeDomProvider provider = CodeDomProvider.CreateProvider("CSharp");
+            CodeGeneratorOptions options = new CodeGeneratorOptions
+            {
+                BracingStyle = "C"
+            };
+
+            string testDirectoryLocation = GetUnitTestsFolderPath();
+            var path = string.Format(@"{0}\{1}", testDirectoryLocation, outputFileName);
+            using (StreamWriter sourceWriter = new StreamWriter(path))
+            {
+                provider.GenerateCodeFromCompileUnit(
+                    targetUnit, sourceWriter, options);
+            }
+        }
+
+        public bool CompileAsDLL(string sourceName, List<string> referencedAssemblies)
+        {
+            string testDirectoryLocation = GetUnitTestsFolderPath();
+            string sourcePath = string.Format(@"{0}\{1}", testDirectoryLocation, sourceName);
+
+            FileInfo sourceFile = new FileInfo(sourcePath);
             CodeDomProvider provider = null;
             bool compileOk = false;
 
@@ -33,13 +54,12 @@ namespace CodeGenerationTestApp
 
             if (provider != null)
             {
-                // Format the executable file name.
-                // Build the output assembly path using the current directory
-                // and <source>_cs.dll or <source>_vb.dll.
-
+                // Build the output assembly
+                // under the root's project folder, create a new folder named UnitTests
+                // save the unit tests dlls in it
                 String dllName = String.Format(@"{0}\{1}.dll",
-                    System.Environment.CurrentDirectory,
-                    sourceFile.Name.Replace(".", "_"));
+                    testDirectoryLocation,
+                    sourceFile.Name.Replace(".cs", "_Tests"));
 
                 CompilerParameters cp = new CompilerParameters
                 {
@@ -57,14 +77,19 @@ namespace CodeGenerationTestApp
                     TreatWarningsAsErrors = false
                 };
 
+                foreach(string assembly in referencedAssemblies)
+                {
+                    cp.ReferencedAssemblies.Add(assembly);
+                }
+
                 // Invoke compilation of the source file.
-                CompilerResults cr = provider.CompileAssemblyFromFile(cp, sourceName);
+                CompilerResults cr = provider.CompileAssemblyFromFile(cp, sourcePath);
 
                 if (cr.Errors.Count > 0)
                 {
                     // Display compilation errors.
                     Console.WriteLine("Errors building {0} into {1}",
-                        sourceName, cr.PathToAssembly);
+                        sourcePath, cr.PathToAssembly);
                     foreach (CompilerError ce in cr.Errors)
                     {
                         Console.WriteLine("  {0}", ce.ToString());
@@ -75,7 +100,7 @@ namespace CodeGenerationTestApp
                 {
                     // Display a successful compilation message.
                     Console.WriteLine("Source {0} built into {1} successfully.",
-                        sourceName, cr.PathToAssembly);
+                        sourcePath, cr.PathToAssembly);
                 }
 
                 // Return the results of the compilation.
@@ -89,6 +114,19 @@ namespace CodeGenerationTestApp
                 }
             }
             return compileOk;
+        }
+
+        public string GetUnitTestsFolderPath()
+        {
+            string currentDirectoryLocation = string.Format(@"{0}\..\..", Environment.CurrentDirectory);
+            string testDirectoryLocation = string.Format(@"{0}\{1}", currentDirectoryLocation, "UnitTests");
+
+            if (!Directory.Exists(testDirectoryLocation))
+            {
+                Directory.CreateDirectory(testDirectoryLocation);
+            }
+
+            return testDirectoryLocation;
         }
     }
 }

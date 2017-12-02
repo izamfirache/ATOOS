@@ -201,3 +201,5 @@ $RECYCLE.BIN/
 *.msi
 *.msm
 *.msppackages/ManagedEsent.1.9.4/lib/net40/Esent.Interop.dll
+/packages-custom
+/CodeGenerationTestApp/UnitTests
