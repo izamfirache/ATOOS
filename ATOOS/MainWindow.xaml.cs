@@ -179,12 +179,13 @@ namespace ATOOS
         private void Button_Click_6(object sender, RoutedEventArgs e)
         {
             var unitTestDirectory = @"";
-            
+            bool areUnitTestsGenerated = false;
+
             if (_factory._instances.Count != 0)
             {
                 var unitTestGenerator = new UnitTestGenerator.Core.UnitTestGenerator(unitTestDirectory, _factory);
                 unitTestGenerator.GenerateUnitTestsForClass(solutionPath.Text);
-
+                areUnitTestsGenerated = true;
                 MessageBox.Show("Done. Check the UnitTests folder.");
             }
             else
@@ -192,7 +193,50 @@ namespace ATOOS
                 MessageBox.Show("Press the Discover solution types button first.");
             }
 
-            // runt the generated unit tests and display the result in resultBox
+            // run the generated unit tests and display the result in resultBox
+            if (areUnitTestsGenerated)
+            {
+                // execute the unit tests and display the results
+                DirectoryInfo di = new DirectoryInfo(unitTestDirectory);
+                foreach (FileInfo file in di.GetFiles())
+                {
+                    if (file.Name.Contains(".dll"))
+                    {
+                        RunUnitTestsForDll(file.Name, unitTestDirectory);
+                    }
+                }
+            }
+        }
+
+        private void RunUnitTestsForDll(string fileName, string unitTestDirectory)
+        {
+            var runUnitTestsProcess = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = string.Format(@"{0}\nunit-console\{1}", unitTestDirectory, "nunit3-console.exe"),
+                    Arguments = string.Format(@"{0}\{1}", unitTestDirectory, fileName),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                }
+            };
+
+            try
+            {
+                // Start the process with the info we specified and display the result.
+                runUnitTestsProcess.Start();
+                runUnitTestsProcess.WaitForExit();
+
+                string resultText = runUnitTestsProcess.StandardOutput.ReadToEnd();
+                resultBox.AppendText(resultText);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+                resultBox.AppendText(e.Message);
+            }
         }
     }
 }
