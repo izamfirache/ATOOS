@@ -6,21 +6,25 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ATOOS.Core.Models;
+using System.IO;
+using System.Reflection;
 
 namespace CodeAnalyzer
 {
     public class SolutionAnalyzer
     {
         private string _pathToSolution;
+        private AnalyzedSolution _analyzedSolution;
 
         public SolutionAnalyzer(string pathToSolution)
         {
             _pathToSolution = pathToSolution;
+            _analyzedSolution = new AnalyzedSolution();
         }
 
         public AnalyzedSolution AnalyzeSolution()
         {
-            var analyzedSolution = new AnalyzedSolution();
+            //var analyzedSolution = new AnalyzedSolution();
             var basicMetricsProvider = new BasicMetricsProvider();
             var workspace = CreateWorkspace();
             var solutionToAnalyze = GetSolutionToAnalyze(workspace, _pathToSolution);
@@ -94,10 +98,10 @@ namespace CodeAnalyzer
                     }
                     analyzedProject.Classes.Add(newClass);
                 }
-                analyzedSolution.Projects.Add(analyzedProject);
+                _analyzedSolution.Projects.Add(analyzedProject);
             }
 
-            return analyzedSolution;
+            return _analyzedSolution;
         }
 
         private MSBuildWorkspace CreateWorkspace()
@@ -126,6 +130,18 @@ namespace CodeAnalyzer
             // get the project's compiled assembly
             Compilation projectCompiledAssembly = project.GetCompilationAsync().Result;
             return projectCompiledAssembly;
+        }
+
+        public void CopyAllProjAssembliesIntoUnitTestsFolder(string unitTestsFolderPatth)
+        {
+            foreach (AnalyzedProject proj in _analyzedSolution.Projects)
+            {
+                if (!string.IsNullOrEmpty(proj.OutputFilePath))
+                {
+                    var extension = proj.OutputFilePath.Contains(".dll") ? "dll" : "exe";
+                    File.Copy(proj.OutputFilePath, string.Format("{0}\\{1}.{2}", unitTestsFolderPatth, proj.Name, extension));
+                }
+            }
         }
     }
 }

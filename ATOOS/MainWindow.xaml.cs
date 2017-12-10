@@ -19,10 +19,14 @@ namespace ATOOS
     public partial class MainWindow : Window
     {
         private Factory _factory = new Factory();
+        private SolutionAnalyzer solutionAnalyzer;
+        private AnalyzedSolution analyzedSolution;
+
         public MainWindow()
         {
             InitializeComponent();
             solutionPath.Text = @"";
+            solutionAnalyzer = new SolutionAnalyzer(solutionPath.Text);
         }
 
         private void AnalyzeSolution_Click(object sender, RoutedEventArgs e)
@@ -31,11 +35,10 @@ namespace ATOOS
             watch.Start();
 
             List<Class> discoveredClasses = new List<Class>();
-            var projectAnalyzer = new CodeAnalyzer.SolutionAnalyzer(solutionPath.Text);
 
             if (!string.IsNullOrEmpty(solutionPath.Text))
             {
-                var analyzedSolution = projectAnalyzer.AnalyzeSolution();
+                analyzedSolution = solutionAnalyzer.AnalyzeSolution();
                 foreach (AnalyzedProject proj in analyzedSolution.Projects)
                 {
                     resultBox.AppendText(string.Format("Project OutputPath: {0}\r", proj.OutputFilePath));
@@ -136,7 +139,7 @@ namespace ATOOS
         {
             // discover all solution type and register them in the unity container
             _factory.DiscoverAllSolutionTypes(solutionPath.Text);
-            MessageBox.Show("Done!");
+            MessageBox.Show("Done. The instances factory is created!");
         }
 
         private void Button_Click_3(object sender, RoutedEventArgs e)
@@ -186,36 +189,52 @@ namespace ATOOS
                 var unitTestGenerator = new UnitTestGenerator.Core.UnitTestGenerator(unitTestDirectory, _factory);
                 unitTestGenerator.GenerateUnitTestsForClass(solutionPath.Text);
                 areUnitTestsGenerated = true;
-                MessageBox.Show("Done. Check the UnitTests folder.");
+                MessageBox.Show("Done. The unit tests was generated.");
             }
             else
             {
                 MessageBox.Show("Press the Discover solution types button first.");
             }
 
+            // copy the project assembly into UnitTestDirectory
+            // in order for the tested typesto be visible
+            if (analyzeSolution == null)
+            {
+                solutionAnalyzer.AnalyzeSolution();
+            }
+            solutionAnalyzer.CopyAllProjAssembliesIntoUnitTestsFolder(unitTestDirectory);
+
             // run the generated unit tests and display the result in resultBox
             if (areUnitTestsGenerated)
             {
                 // execute the unit tests and display the results
                 DirectoryInfo di = new DirectoryInfo(unitTestDirectory);
+                List<string> testedDlls = new List<string>();
                 foreach (FileInfo file in di.GetFiles())
                 {
-                    if (file.Name.Contains(".dll"))
+                    if (file.Name.Contains(".dll") && file.Name.Contains("_Tests"))
                     {
-                        RunUnitTestsForDll(file.Name, unitTestDirectory);
+                        testedDlls.Add(file.Name);
                     }
                 }
+                RunUnitTestsForDll(testedDlls, unitTestDirectory);
             }
         }
 
-        private void RunUnitTestsForDll(string fileName, string unitTestDirectory)
+        private void RunUnitTestsForDll(List<string> testedDlls, string unitTestDirectory)
         {
+            var testedDllsArguments = "";
+            foreach(string dll in testedDlls)
+            {
+                testedDllsArguments += string.Format(@"{0}\{1}", unitTestDirectory, dll) + " ";
+            }
+
             var runUnitTestsProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = string.Format(@"{0}\nunit-console\{1}", unitTestDirectory, "nunit3-console.exe"),
-                    Arguments = string.Format(@"{0}\{1}", unitTestDirectory, fileName),
+                    Arguments = testedDllsArguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     CreateNoWindow = true,

@@ -63,16 +63,28 @@ namespace UnitTestGenerator.Core
                     // ****************************************************************************************************
 
                     // GENERATE A UNIT TEST FOR EACH METHOD
-                    var methods = type.GetMethods();
+                    var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                     foreach (MethodInfo m in methods)
                     {
                         // generate method parameters
                         var methodParameters = m.GetParameters();
-                        var parameters = new List<object>();
+                        //var parameters = new List<object>();
+                        CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
+                        int j = 0;
                         foreach (ParameterInfo p in methodParameters)
                         {
-                            var instance = ResolveParameter(p.ParameterType.Name);
-                            parameters.Add(instance);
+                            if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                            {
+                                parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                            }
+                            else
+                            {
+                                CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
+                                parameters[j] = createObjectExpression;
+                            }
+                            //var instance = ResolveParameter(p.ParameterType.Name);
+                            //parameters.Add(instance);
+                            j++;
                         }
 
                         _objectFactory._instances.TryGetValue(type.Name, out object objectInstance);
@@ -92,8 +104,8 @@ namespace UnitTestGenerator.Core
             }
         }
 
-        private void AddUnitTestToTestClass(CodeTypeDeclaration targetClass, string methodName, 
-            List<object> methodParameters, Type targetType, object objectInstance)
+        private void AddUnitTestToTestClass(CodeTypeDeclaration targetClass, string methodName,
+            CodeExpression[] methodParameters, Type targetType, object objectInstance)
         {
             // unit test name/structure
             CodeMemberMethod testMethod = new CodeMemberMethod
@@ -113,19 +125,32 @@ namespace UnitTestGenerator.Core
             // build unit test code block
             // 1. act part, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
-            CodeExpression[] methodInvokeParameters = new CodeExpression[methodParameters.Count];
-            int i = 0;
-            foreach(object p in methodParameters)
+            //CodeExpression[] methodInvokeParameters = new CodeExpression[methodParameters.Length];
+            //int i = 0;
+            //foreach(object p in methodParameters)
+            //{
+            //    methodInvokeParameters[i] = methodParameters[i];
+            //    i++;
+            //}
+            
+            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
+            var j = 0;
+            foreach(ParameterInfo pi in targetTypeConstrucor.GetParameters())
             {
-                methodInvokeParameters[i] = new CodePrimitiveExpression(p);
-                i++;
+                var resolvedParameter = ResolveParameter(pi.ParameterType.Name);
+                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
+                {
+                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                }
+                else
+                {
+                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+                    ctorParams[j] = createObjectExpression;
+                }
+                j++;
             }
 
-            // FIND THESE BASED ON TYPE CONSTRUCTOR PARAMETERS !!!
-            CodeExpression[] ctorParams = new CodeExpression[3];
-            ctorParams[0] = new CodePrimitiveExpression("name");
-            ctorParams[1] = new CodePrimitiveExpression("surname");
-            ctorParams[2] = new CodePrimitiveExpression(30);
             CodeObjectCreateExpression mthodInvokeTargetObject = 
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
 
@@ -144,7 +169,7 @@ namespace UnitTestGenerator.Core
                     // methodName indicates the method to invoke.
                     methodName,
                     // parameters array contains the parameters for the method.
-                    methodInvokeParameters);
+                    methodParameters);
             CodeAssignStatement assignMethodInvocatonResult = new CodeAssignStatement(
                 new CodeVariableReferenceExpression("result"), invokeMethodExpression);
             
@@ -179,8 +204,29 @@ namespace UnitTestGenerator.Core
                     return GetRandomString();
                 case "Int32":
                     return GetRandomInteger();
-                default: return null;
+                default:
+                    //_objectFactory._instances.TryGetValue(typeToResolve, out object objectInstance);
+                    return null;
             }
+        }
+
+        private CodeObjectCreateExpression CreateCustomType(string typeToResolve)
+        {
+            Type typeToResolveInfo = _assemblyExportedTypes.Where(aet => aet.Name == typeToResolve).FirstOrDefault();
+            var typeToResolveConstructor = typeToResolveInfo.GetConstructors()
+                .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            CodeExpression[] ctorParams = new CodeExpression[typeToResolveConstructor.GetParameters().Length];
+            var j = 0;
+            foreach (ParameterInfo pi in typeToResolveConstructor.GetParameters())
+            {
+                ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                j++;
+            }
+
+            CodeObjectCreateExpression objectCreationExpression =
+                new CodeObjectCreateExpression(typeToResolveInfo.FullName, ctorParams);
+
+            return objectCreationExpression;
         }
 
         private int GetRandomInteger()
