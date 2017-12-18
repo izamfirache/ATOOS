@@ -97,7 +97,7 @@ namespace UnitTestGenerator.Core
                     // Compile the above generated code into a DLL
                     compileHelper.CompileAsDLL(classSourceName, new List<string>()
                     {
-                        @"c:\Users\iuliu\Desktop\ATOOS\ATOOS\UnitTests\nunit.framework.dll",
+                        @"",  // TODO : get this from packages folder
                         proj.OutputFilePath // project's dll
                     });
                 }

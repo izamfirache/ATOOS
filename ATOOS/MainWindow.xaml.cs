@@ -182,6 +182,14 @@ namespace ATOOS
         private void Button_Click_6(object sender, RoutedEventArgs e)
         {
             var unitTestDirectory = @"";
+            DirectoryInfo dir = new DirectoryInfo(unitTestDirectory);
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                if (!file.Name.Contains("nunit"))
+                {
+                    file.Delete();
+                }
+            }
             bool areUnitTestsGenerated = false;
 
             if (_factory._instances.Count != 0)

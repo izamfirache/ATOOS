@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2009
+VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ATOOS", "ATOOS\ATOOS.csproj", "{8E4FA780-DF87-4317-8A89-779D06A5F558}"
 EndProject
@@ -18,6 +18,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestGenerator.Core", "UnitTestGenerator\UnitTestGenerator.Core.csproj", "{F4C1A7A5-AD57-4440-9C75-9C54E1347B05}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObjectFactory", "ObjectFactory\ObjectFactory.csproj", "{0EACADB8-B848-4DF0-BF51-ECADE44ECA08}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtoosVSExtension", "AtoosVSExtension\AtoosVSExtension.csproj", "{F997DB72-5B4A-4E98-B989-8E95D7C2B527}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +59,10 @@ Global
 		{0EACADB8-B848-4DF0-BF51-ECADE44ECA08}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EACADB8-B848-4DF0-BF51-ECADE44ECA08}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0EACADB8-B848-4DF0-BF51-ECADE44ECA08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F997DB72-5B4A-4E98-B989-8E95D7C2B527}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F997DB72-5B4A-4E98-B989-8E95D7C2B527}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F997DB72-5B4A-4E98-B989-8E95D7C2B527}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F997DB72-5B4A-4E98-B989-8E95D7C2B527}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
