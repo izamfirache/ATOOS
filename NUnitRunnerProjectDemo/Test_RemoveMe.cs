@@ -27,5 +27,11 @@ namespace NUnitRunnerProjectDemo
         {
             Assert.AreEqual(20, 20);
         }
+
+        [TestCase()]
+        public virtual void BasicUnitTest4()
+        {
+            Assert.AreEqual(20, 20);
+        }
     }
 }

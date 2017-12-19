@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE80;
 using EnvDTE;
 using System.Windows.Forms;
+using NuGet;
 
 namespace AddNewProjectToSolution.Extension
 {
@@ -99,12 +100,40 @@ namespace AddNewProjectToSolution.Extension
             try
             {
                 var unitTestProjectName = string.Format("{0}{1}", "NewProject_Tests", new Random().Next(0, 10000));
+                
                 CreateUnitTestProject(dte, unitTestProjectName);
+
                 AddClassToUnitTestsProject(dte, unitTestProjectName);
+
+                string packagesPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), "packages");
+                InstallNUnitNugetPackages(packagesPath);
+
+                AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
+
+                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget package manually on the created project and run the generated unit tests.",
+                        "Setup done", MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show("ERROR: " + ex.Message);
+            }
+        }
+
+        private void AddNeededReferencesToProject(DTE2 dte, string projectName, string packagesPath)
+        {
+            // get the current solution
+            Solution2 currentSolution = (Solution2)dte.Solution;
+
+            foreach(Project proj in currentSolution.Projects)
+            {
+                if(proj.Name == projectName)
+                {
+                    var vsProject = proj.Object as VSLangProj.VSProject;
+                    vsProject.References.Add(string.Format("{0}\\{1}", 
+                        packagesPath, 
+                        "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"));
+                }
             }
         }
 
@@ -137,16 +166,46 @@ namespace AddNewProjectToSolution.Extension
         {
             // get the current solution
             Solution2 currentSolution = (Solution2)dte.Solution;
+            string currentSolutionPath = string.Format("{0}\\{1}", GetSolutionPath(dte), projectName);
+            
+            // TODO: find this based on runtime context !!!!
+            string csTemplatePath = @"c:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ProjectTemplatesCache\CSharp\Windows Root\Windows\1033\ClassLibrary\csClassLibrary.vstemplate";
+            
+            // create a new C# console project using the template obtained above.
+            currentSolution.AddFromTemplate(csTemplatePath, currentSolutionPath, projectName, false);
+        }
+
+        private string GetSolutionPath(DTE2 dte)
+        {
+            Solution2 currentSolution = (Solution2)dte.Solution;
 
             string currentSolutionPath = currentSolution.FileName;
             int index = currentSolution.FileName.LastIndexOf("\\");
             currentSolutionPath = currentSolutionPath.Substring(0, index);
-            string csPrjPath = string.Format("{0}\\{1}", currentSolutionPath, "NewProject.Tests");
-            string csTemplatePath = currentSolution.GetProjectTemplate("ConsoleApplication.zip", "CSharp");
 
-            // create a new C# console project using the template obtained above.
-            currentSolution.AddFromTemplate(csTemplatePath, csPrjPath, "NewProject.Tests", false);
-            //MessageBox.Show("The Unit Tests project was created. Check the Solution Explorer window.");
+            return currentSolutionPath;
+        }
+
+        private void InstallNUnitNugetPackages(string installPath)
+        {
+            try
+            {
+                string NunitPackageID = "NUnit";
+                //string NunitConsolePackageID = "NUnit.Console";
+                //string NunitAdapterPackageID = "NUnit3TestAdapter";
+
+                IPackageRepository repo = PackageRepositoryFactory.Default
+                    .CreateRepository("https://packages.nuget.org/api/v2");
+                
+                PackageManager packageManager = new PackageManager(repo, installPath);
+                packageManager.InstallPackage(NunitPackageID);
+                //packageManager.InstallPackage(NunitConsolePackageID);
+                //packageManager.InstallPackage(NunitAdapterPackageID);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
     }
 }
