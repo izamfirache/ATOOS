@@ -12,24 +12,28 @@ namespace ATOOS.VSExtension.TestGenerator
 {
     public class UnitTestGenerator
     {
-        private string _unitTestDirectory;
+        private string _generatedTestClassesDirectory;
         private Factory _objectFactory;
-        public UnitTestGenerator(string unitTestDirectory, Factory objectFactory)
+        private string _packagesFolder;
+        public UnitTestGenerator(string generatedTestClassesDirectory, Factory objectFactory, string packagesFolder)
         {
-            _unitTestDirectory = unitTestDirectory;
+            _generatedTestClassesDirectory = generatedTestClassesDirectory;
             _objectFactory = objectFactory;
+            _packagesFolder = packagesFolder;
         }
 
         private Type[] _assemblyExportedTypes = new Type[100];
 
-        public void GenerateUnitTestsForClass(string solutionPath)
+        public List<string> GenerateUnitTestsForClass(string solutionPath)
         {
+            List<string> generatedTestClasses = new List<string>();
+
             // analyze solution, discover basic information about each project
             var solutionAnalyzer = new SolutionAnalyzer(solutionPath);
             var analyedSolution = solutionAnalyzer.AnalyzeSolution();
 
             // create a compile helper
-            CompilerHelper compileHelper = new CompilerHelper(_unitTestDirectory);
+            CompilerHelper compileHelper = new CompilerHelper(_generatedTestClassesDirectory);
 
             foreach (AnalyzedProject proj in analyedSolution.Projects)
             {
@@ -86,21 +90,28 @@ namespace ATOOS.VSExtension.TestGenerator
                             j++;
                         }
 
-                        _objectFactory._instances.TryGetValue(type.Name, out object objectInstance);
+                        _objectFactory.Instances.TryGetValue(type.Name, out object objectInstance);
                         AddUnitTestToTestClass(targetClass, m.Name, parameters, type, objectInstance);
                     }
 
                     // Generate the c# code
-                    compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
+                    string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
 
                     // Compile the above generated code into a DLL
-                    compileHelper.CompileAsDLL(classSourceName, new List<string>()
+                    bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                     {
-                        @"",  // TODO : get this from packages folder
-                        proj.OutputFilePath // project's dll
+                        string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
+                        proj.OutputFilePath
                     });
+
+                    if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
+                    {
+                        generatedTestClasses.Add(generatedTestClassPath);
+                    }
                 }
             }
+
+            return generatedTestClasses;
         }
 
         private void AddUnitTestToTestClass(CodeTypeDeclaration targetClass, string methodName,

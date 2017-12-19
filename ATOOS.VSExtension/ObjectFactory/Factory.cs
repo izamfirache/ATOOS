@@ -10,7 +10,7 @@ namespace ATOOS.VSExtension.ObjectFactory
 {
     public class Factory
     {
-        public Dictionary<string, object> _instances = new Dictionary<string, object>();
+        public Dictionary<string, object> Instances = new Dictionary<string, object>();
         private Type[] _assemblyExportedTypes = new Type[100];
 
         public void DiscoverAllSolutionTypes(string solutionPath)
@@ -42,13 +42,13 @@ namespace ATOOS.VSExtension.ObjectFactory
                         {
                             // having the constructor signature, create a new instance of that object
                             var classInstance = CreateNewInstance(cls.Constructor, classType, proj.Classes);
-                            _instances.Add(cls.Name, classInstance);
+                            Instances.Add(cls.Name, classInstance);
                         }
                         else
                         {
                             // no constructor
                             var classInstance = CreateDefaultInstance(classType);
-                            _instances.Add(cls.Name, classInstance);
+                            Instances.Add(cls.Name, classInstance);
                         }
                     }
                 }

@@ -25,7 +25,7 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"";
+            solutionPath.Text = @"c:\dev\TestProject1\TestProject1.sln";
             solutionAnalyzer = new SolutionAnalyzer(solutionPath.Text);
         }
 

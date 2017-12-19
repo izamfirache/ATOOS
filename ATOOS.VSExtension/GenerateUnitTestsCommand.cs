@@ -7,6 +7,9 @@ using EnvDTE80;
 using EnvDTE;
 using System.Windows.Forms;
 using NuGet;
+using ATOOS.VSExtension.ObjectFactory;
+using ATOOS.VSExtension.TestGenerator;
+using System.Collections.Generic;
 
 namespace ATOOS.VSExtension
 {
@@ -92,34 +95,63 @@ namespace ATOOS.VSExtension
         private void MenuItemCallback(object sender, EventArgs e)
         {
             var dte = (DTE2)ServiceProvider.GetService(typeof(DTE));
+            var unitTestProjectName = string.Format("{0}{1}", "NewProject_Tests", new Random().Next(0, 10000));
 
-            // for the selected project, discover all types and create the object factory
+            // discover solution/project types and create an object factory
+            Factory objectFactory = new Factory();
+            var solutionFullPath = GetSolutionFullPath(dte);
+            objectFactory.DiscoverAllSolutionTypes(solutionFullPath);
 
             // generate unit tests for the analyzed project
-            
-            // create unit tests project
-            CreateUnitTestsProject(dte);
+            if (objectFactory.Instances.Count != 0)
+            {
+                // create an empty Unit Test project and return a path to the created project
+                var generatedTestClassesDirectory = CreateUnitTestsProject(dte, unitTestProjectName);
+                string packagesPath = GetSolutionPackagesFolder(dte);
+
+                var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory, objectFactory, packagesPath);
+                List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath);
+
+                // add test classes to project
+                foreach (string generatedTestClass in testClasses)
+                {
+                    AddClassToUnitTestsProject(dte, unitTestProjectName, generatedTestClass);
+                }
+
+                MessageBox.Show("Done. The unit tests was generated.",
+                        "Unit tests generated", MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+            }
         }
 
-        public void CreateUnitTestsProject(DTE2 dte)
+        public string CreateUnitTestsProject(DTE2 dte, string unitTestProjectName)
         {
             try
             {
-                var unitTestProjectName = string.Format("{0}{1}", "NewProject_Tests", new Random().Next(0, 10000));
                 CreateUnitTestProject(dte, unitTestProjectName);
-                AddClassToUnitTestsProject(dte, unitTestProjectName);
-                string packagesPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), "packages");
+                
+                string packagesPath = GetSolutionPackagesFolder(dte);
                 InstallNUnitNugetPackages(packagesPath);
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
 
                 MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget package manually on the created project and run the generated unit tests.",
                         "Setup done", MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
+
+                var projectPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), unitTestProjectName);
+                return projectPath;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("ERROR: " + ex.Message);
+                throw ex;
             }
+        }
+
+        private string GetSolutionPackagesFolder(DTE2 dte)
+        {
+            string packagesPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), "packages");
+            return packagesPath;
         }
 
         private void AddNeededReferencesToProject(DTE2 dte, string projectName, string packagesPath)
@@ -139,7 +171,7 @@ namespace ATOOS.VSExtension
             }
         }
 
-        private void AddClassToUnitTestsProject(DTE2 dte, string unitTestProjectName)
+        private void AddClassToUnitTestsProject(DTE2 dte, string unitTestProjectName, string generatedTestClass)
         {
             // get the current solution
             Solution2 currentSolution = (Solution2)dte.Solution;
@@ -160,7 +192,10 @@ namespace ATOOS.VSExtension
             if (prj != null)
             {
                 //Create a new project item based on the template, in this case, a Class.
-                ProjectItem prjItem = prj.ProjectItems.AddFromTemplate(itemPath, "NewUnitTestClass.cs");
+                ProjectItem prjItem = prj.ProjectItems.AddFromFile(@"c:\disertation\ATOOS\UnitTests\EmployeeUnitTestsClass.cs");
+
+
+
             }
         }
 
@@ -186,6 +221,12 @@ namespace ATOOS.VSExtension
             currentSolutionPath = currentSolutionPath.Substring(0, index);
 
             return currentSolutionPath;
+        }
+
+        private string GetSolutionFullPath(DTE2 dte)
+        {
+            Solution2 currentSolution = (Solution2)dte.Solution;
+            return currentSolution.FileName;
         }
 
         private void InstallNUnitNugetPackages(string installPath)

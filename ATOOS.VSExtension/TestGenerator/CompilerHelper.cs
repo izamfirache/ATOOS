@@ -18,26 +18,26 @@ namespace ATOOS.VSExtension.TestGenerator
             _unitTestDirectory = unitTestDirectory;
         }
 
-        public void GenerateCSharpCode(CodeCompileUnit targetUnit, string outputFileName)
+        public string GenerateCSharpCode(CodeCompileUnit targetUnit, string outputFileName)
         {
             CodeDomProvider provider = CodeDomProvider.CreateProvider("CSharp");
             CodeGeneratorOptions options = new CodeGeneratorOptions
             {
                 BracingStyle = "C"
             };
-
-            //string testDirectoryLocation = GetUnitTestsFolderPath();
+            
             var path = string.Format(@"{0}\{1}", _unitTestDirectory, outputFileName);
             using (StreamWriter sourceWriter = new StreamWriter(path))
             {
                 provider.GenerateCodeFromCompileUnit(
                     targetUnit, sourceWriter, options);
+
+                return path;
             }
         }
 
         public bool CompileAsDLL(string sourceName, List<string> referencedAssemblies)
         {
-            //string testDirectoryLocation = GetUnitTestsFolderPath();
             string sourcePath = string.Format(@"{0}\{1}", _unitTestDirectory, sourceName);
 
             FileInfo sourceFile = new FileInfo(sourcePath);
