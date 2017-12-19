@@ -110,13 +110,18 @@ namespace ATOOS.VSExtension
                 string packagesPath = GetSolutionPackagesFolder(dte);
 
                 var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory, objectFactory, packagesPath);
-                List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath);
+                List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, unitTestProjectName);
 
                 // add test classes to project
+                string csprojPath = string.Format(@"{0}\\{1}\\{2}{3}", GetSolutionPath(dte), 
+                    unitTestProjectName, unitTestProjectName, ".csproj");
+
+                var p = new Microsoft.Build.Evaluation.Project(csprojPath);
                 foreach (string generatedTestClass in testClasses)
                 {
-                    AddClassToUnitTestsProject(dte, unitTestProjectName, generatedTestClass);
+                    p.AddItem("Compile", generatedTestClass);
                 }
+                p.Save();
 
                 MessageBox.Show("Done. The unit tests was generated.",
                         "Unit tests generated", MessageBoxButtons.OK,
@@ -134,9 +139,9 @@ namespace ATOOS.VSExtension
                 InstallNUnitNugetPackages(packagesPath);
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
 
-                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget package manually on the created project and run the generated unit tests.",
-                        "Setup done", MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " + 
+                        "package manually on the created project and run the generated unit tests.",
+                        "Setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 var projectPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), unitTestProjectName);
                 return projectPath;
@@ -167,35 +172,16 @@ namespace ATOOS.VSExtension
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
                         "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"));
+                    foreach (Project project in currentSolution.Projects)
+                    {
+                        if (project.Name != projectName)
+                        {
+                            var projectOutputPath = string.Format("{0}\\{1}\\bin\\Debug\\{2}{3}",
+                                GetSolutionPath(dte), project.Name, project.Name, ".dll");
+                            vsProject.References.Add(projectOutputPath);
+                        }
+                    }
                 }
-            }
-        }
-
-        private void AddClassToUnitTestsProject(DTE2 dte, string unitTestProjectName, string generatedTestClass)
-        {
-            // get the current solution
-            Solution2 currentSolution = (Solution2)dte.Solution;
-
-            // Point to the first specified project
-            Project prj = null;
-            foreach (Project project in currentSolution.Projects)
-            {
-                if (project.Name == unitTestProjectName)
-                {
-                    prj = project;
-                }
-            }
-
-            // Retrieve the path to the class template.
-            string itemPath = currentSolution.GetProjectItemTemplate("Class.zip", "csproj");
-
-            if (prj != null)
-            {
-                //Create a new project item based on the template, in this case, a Class.
-                ProjectItem prjItem = prj.ProjectItems.AddFromFile(@"c:\disertation\ATOOS\UnitTests\EmployeeUnitTestsClass.cs");
-
-
-
             }
         }
 
@@ -206,10 +192,11 @@ namespace ATOOS.VSExtension
             string currentSolutionPath = string.Format("{0}\\{1}", GetSolutionPath(dte), projectName);
 
             // TODO: find this based on runtime context !!!!
-            string csTemplatePath = @"c:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ProjectTemplatesCache\CSharp\Windows Root\Windows\1033\ClassLibrary\csClassLibrary.vstemplate";
+            string csTemplatePath = @"";
 
             // create a new C# console project using the template obtained above.
             currentSolution.AddFromTemplate(csTemplatePath, currentSolutionPath, projectName, false);
+            currentSolution.SaveAs(currentSolution.FullName);
         }
 
         private string GetSolutionPath(DTE2 dte)
@@ -234,16 +221,12 @@ namespace ATOOS.VSExtension
             try
             {
                 string NunitPackageID = "NUnit";
-                //string NunitConsolePackageID = "NUnit.Console";
-                //string NunitAdapterPackageID = "NUnit3TestAdapter";
 
                 IPackageRepository repo = PackageRepositoryFactory.Default
                     .CreateRepository("https://packages.nuget.org/api/v2");
 
                 PackageManager packageManager = new PackageManager(repo, installPath);
                 packageManager.InstallPackage(NunitPackageID);
-                //packageManager.InstallPackage(NunitConsolePackageID);
-                //packageManager.InstallPackage(NunitAdapterPackageID);
             }
             catch (Exception e)
             {

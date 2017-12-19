@@ -24,7 +24,7 @@ namespace ATOOS.VSExtension.TestGenerator
 
         private Type[] _assemblyExportedTypes = new Type[100];
 
-        public List<string> GenerateUnitTestsForClass(string solutionPath)
+        public List<string> GenerateUnitTestsForClass(string solutionPath, string generatedUnitTestProject)
         {
             List<string> generatedTestClasses = new List<string>();
 
@@ -37,76 +37,79 @@ namespace ATOOS.VSExtension.TestGenerator
 
             foreach (AnalyzedProject proj in analyedSolution.Projects)
             {
-                var assembly = Assembly.LoadFile(proj.OutputFilePath); // WHAT IF THE PROJECT IS NOT COMPILED ??
-                _assemblyExportedTypes = assembly.GetExportedTypes();
-
-                foreach (Type type in _assemblyExportedTypes)
+                if (proj.Name != generatedUnitTestProject)
                 {
-                    // ****************************************************************************************************
-                    // extract this into a separate method
-                    // create a code unit
-                    CodeCompileUnit codeUnit = new CodeCompileUnit();
+                    var assembly = Assembly.LoadFile(proj.OutputFilePath); // WHAT IF THE PROJECT IS NOT COMPILED ??
+                    _assemblyExportedTypes = assembly.GetExportedTypes();
 
-                    // create a namespace
-                    CodeNamespace codeUnitNamespace = new CodeNamespace(string.Format("{0}.UnitTestsNamespace", type.Name));
-                    codeUnitNamespace.Imports.Add(new CodeNamespaceImport("System"));
-                    codeUnitNamespace.Imports.Add(new CodeNamespaceImport("NUnit.Framework"));
-                    codeUnitNamespace.Imports.Add(new CodeNamespaceImport(proj.Name));
-
-                    // create a class
-                    CodeTypeDeclaration targetClass = new CodeTypeDeclaration(string.Format("{0}UnitTestsClass", type.Name))
+                    foreach (Type type in _assemblyExportedTypes)
                     {
-                        IsClass = true,
-                        TypeAttributes = TypeAttributes.Public
-                    };
-                    codeUnitNamespace.Types.Add(targetClass);
-                    codeUnit.Namespaces.Add(codeUnitNamespace);
+                        // ****************************************************************************************************
+                        // extract this into a separate method
+                        // create a code unit
+                        CodeCompileUnit codeUnit = new CodeCompileUnit();
 
-                    string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
-                    // ****************************************************************************************************
+                        // create a namespace
+                        CodeNamespace codeUnitNamespace = new CodeNamespace(string.Format("{0}.UnitTestsNamespace", type.Name));
+                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport("System"));
+                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport("NUnit.Framework"));
+                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport(proj.Name));
 
-                    // GENERATE A UNIT TEST FOR EACH METHOD
-                    var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                    foreach (MethodInfo m in methods)
-                    {
-                        // generate method parameters
-                        var methodParameters = m.GetParameters();
-                        //var parameters = new List<object>();
-                        CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
-                        int j = 0;
-                        foreach (ParameterInfo p in methodParameters)
+                        // create a class
+                        CodeTypeDeclaration targetClass = new CodeTypeDeclaration(string.Format("{0}UnitTestsClass", type.Name))
                         {
-                            if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                            IsClass = true,
+                            TypeAttributes = TypeAttributes.Public
+                        };
+                        codeUnitNamespace.Types.Add(targetClass);
+                        codeUnit.Namespaces.Add(codeUnitNamespace);
+
+                        string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
+                        // ****************************************************************************************************
+
+                        // GENERATE A UNIT TEST FOR EACH METHOD
+                        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                        foreach (MethodInfo m in methods)
+                        {
+                            // generate method parameters
+                            var methodParameters = m.GetParameters();
+                            //var parameters = new List<object>();
+                            CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
+                            int j = 0;
+                            foreach (ParameterInfo p in methodParameters)
                             {
-                                parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                                if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                                {
+                                    parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                                }
+                                else
+                                {
+                                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
+                                    parameters[j] = createObjectExpression;
+                                }
+                                //var instance = ResolveParameter(p.ParameterType.Name);
+                                //parameters.Add(instance);
+                                j++;
                             }
-                            else
-                            {
-                                CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
-                                parameters[j] = createObjectExpression;
-                            }
-                            //var instance = ResolveParameter(p.ParameterType.Name);
-                            //parameters.Add(instance);
-                            j++;
+
+                            _objectFactory.Instances.TryGetValue(type.Name, out object objectInstance);
+                            AddUnitTestToTestClass(targetClass, m.Name, parameters, type, objectInstance);
                         }
 
-                        _objectFactory.Instances.TryGetValue(type.Name, out object objectInstance);
-                        AddUnitTestToTestClass(targetClass, m.Name, parameters, type, objectInstance);
-                    }
+                        // Generate the c# code
+                        string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
 
-                    // Generate the c# code
-                    string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
-
-                    // Compile the above generated code into a DLL
-                    bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
+                        // Compile the above generated code into a DLL
+                        bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                     {
                         string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
                         proj.OutputFilePath
                     });
 
-                    if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
-                    {
-                        generatedTestClasses.Add(generatedTestClassPath);
+                        if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
+                        {
+                            generatedTestClasses.Add(generatedTestClassPath);
+                        }
                     }
                 }
             }
