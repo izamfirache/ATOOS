@@ -116,7 +116,7 @@ namespace ATOOS.VSExtension
                     "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll");
                 if (!File.Exists(nunitFrameworkDllFimePath))
                 {
-                    InstallNUnitNugetPackage(packagesPath);
+                    InstallNeededNugetPackage(packagesPath);
                 }
 
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
@@ -149,6 +149,11 @@ namespace ATOOS.VSExtension
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
                         "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"));
+
+                    vsProject.References.Add(string.Format("{0}\\{1}",
+                        packagesPath,
+                        "Moq.4.7.145\\lib\\net45\\Moq.dll"));
+
                     foreach (Project project in currentSolution.Projects)
                     {
                         if (project.Name != projectName)
@@ -203,17 +208,19 @@ namespace ATOOS.VSExtension
             return currentSolution.FileName;
         }
 
-        private void InstallNUnitNugetPackage(string installPath)
+        private void InstallNeededNugetPackage(string installPath)
         {
             try
             {
                 string NunitPackageID = "NUnit";
+                string MoqPackageID = "Moq";
 
                 IPackageRepository repo = PackageRepositoryFactory.Default
                     .CreateRepository("https://packages.nuget.org/api/v2");
 
                 PackageManager packageManager = new PackageManager(repo, installPath);
                 packageManager.InstallPackage(NunitPackageID);
+                packageManager.InstallPackage(MoqPackageID);
             }
             catch (Exception e)
             {
