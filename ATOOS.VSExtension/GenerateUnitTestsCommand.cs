@@ -10,34 +10,19 @@ using NuGet;
 using ATOOS.VSExtension.ObjectFactory;
 using ATOOS.VSExtension.TestGenerator;
 using System.Collections.Generic;
+using System.Linq;
+using System.IO;
 
 namespace ATOOS.VSExtension
 {
-    /// <summary>
-    /// Command handler
-    /// </summary>
     internal sealed class GenerateUnitTestsCommand
     {
-        /// <summary>
-        /// Command ID.
-        /// </summary>
         public const int CommandId = 0x0100;
-
-        /// <summary>
-        /// Command menu group (command set GUID).
-        /// </summary>
+        
         public static readonly Guid CommandSet = new Guid("4210003b-22d4-4404-bca8-38abaa597829");
-
-        /// <summary>
-        /// VS Package that provides this command, not null.
-        /// </summary>
+        
         private readonly Package package;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GenerateUnitTestsCommand"/> class.
-        /// Adds our command handlers for menu (commands must exist in the command table file)
-        /// </summary>
-        /// <param name="package">Owner package, not null.</param>
+        
         private GenerateUnitTestsCommand(Package package)
         {
             if (package == null)
@@ -56,18 +41,12 @@ namespace ATOOS.VSExtension
             }
         }
 
-        /// <summary>
-        /// Gets the instance of the command.
-        /// </summary>
         public static GenerateUnitTestsCommand Instance
         {
             get;
             private set;
         }
 
-        /// <summary>
-        /// Gets the service provider from the owner package.
-        /// </summary>
         private IServiceProvider ServiceProvider
         {
             get
@@ -75,27 +54,16 @@ namespace ATOOS.VSExtension
                 return this.package;
             }
         }
-
-        /// <summary>
-        /// Initializes the singleton instance of the command.
-        /// </summary>
-        /// <param name="package">Owner package, not null.</param>
+        
         public static void Initialize(Package package)
         {
             Instance = new GenerateUnitTestsCommand(package);
         }
 
-        /// <summary>
-        /// This function is the callback used to execute the command when the menu item is clicked.
-        /// See the constructor to see how the menu item is associated with this function using
-        /// OleMenuCommandService service and MenuCommand class.
-        /// </summary>
-        /// <param name="sender">Event sender.</param>
-        /// <param name="e">Event args.</param>
         private void MenuItemCallback(object sender, EventArgs e)
         {
             var dte = (DTE2)ServiceProvider.GetService(typeof(DTE));
-            var unitTestProjectName = string.Format("{0}{1}", "NewProject_Tests", new Random().Next(0, 10000));
+            var unitTestProjectName = string.Format("{0}_Tests", GetSelectedProjectName(dte));
 
             // discover solution/project types and create an object factory
             Factory objectFactory = new Factory();
@@ -123,10 +91,18 @@ namespace ATOOS.VSExtension
                 }
                 p.Save();
 
-                MessageBox.Show("Done. The unit tests was generated.",
-                        "Unit tests generated", MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " +
+                        "package manually on the created project, reload/build solution and run the generated unit tests " +
+                        "in the Unit Test Explorer window.", "Unit Test setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+
+        private string GetSelectedProjectName(DTE2 dte)
+        {
+            var selectedItems = dte.SelectedItems;
+            var selectedProjectName = selectedItems.Item(1).Name;
+
+            return selectedProjectName;
         }
 
         public string CreateUnitTestsProject(DTE2 dte, string unitTestProjectName)
@@ -136,13 +112,14 @@ namespace ATOOS.VSExtension
                 CreateUnitTestProject(dte, unitTestProjectName);
                 
                 string packagesPath = GetSolutionPackagesFolder(dte);
-                InstallNUnitNugetPackages(packagesPath);
+                var nunitFrameworkDllFimePath = string.Format("{0}\\{1}", packagesPath, 
+                    "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll");
+                if (!File.Exists(nunitFrameworkDllFimePath))
+                {
+                    InstallNUnitNugetPackage(packagesPath);
+                }
+
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
-
-                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " + 
-                        "package manually on the created project and run the generated unit tests.",
-                        "Setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
                 var projectPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), unitTestProjectName);
                 return projectPath;
             }
@@ -178,7 +155,19 @@ namespace ATOOS.VSExtension
                         {
                             var projectOutputPath = string.Format("{0}\\{1}\\bin\\Debug\\{2}{3}",
                                 GetSolutionPath(dte), project.Name, project.Name, ".dll");
-                            vsProject.References.Add(projectOutputPath);
+
+                            if (File.Exists(projectOutputPath))
+                            {
+                                vsProject.References.Add(projectOutputPath);
+                            }
+                            else
+                            {
+                                MessageBox.Show("Please build the selected project and then create the unit test project.", 
+                                    "Build selected project", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                                // stop execution
+                                Environment.Exit(0);
+                            }
                         }
                     }
                 }
@@ -190,12 +179,10 @@ namespace ATOOS.VSExtension
             // get the current solution
             Solution2 currentSolution = (Solution2)dte.Solution;
             string currentSolutionPath = string.Format("{0}\\{1}", GetSolutionPath(dte), projectName);
+            string projTemplate = currentSolution.GetProjectTemplate("csClassLibrary.vstemplate|FrameworkVersion=4.6.1", "CSharp");
 
-            // TODO: find this based on runtime context !!!!
-            string csTemplatePath = @"";
-
-            // create a new C# console project using the template obtained above.
-            currentSolution.AddFromTemplate(csTemplatePath, currentSolutionPath, projectName, false);
+            // create a new C# class library project using the template obtained above.
+            currentSolution.AddFromTemplate(projTemplate, currentSolutionPath, projectName, false);
             currentSolution.SaveAs(currentSolution.FullName);
         }
 
@@ -216,7 +203,7 @@ namespace ATOOS.VSExtension
             return currentSolution.FileName;
         }
 
-        private void InstallNUnitNugetPackages(string installPath)
+        private void InstallNUnitNugetPackage(string installPath)
         {
             try
             {
