@@ -13,16 +13,14 @@ namespace ATOOS.VSExtension.TestGenerator
     public class UnitTestGenerator
     {
         private string _generatedTestClassesDirectory;
-        private Factory _objectFactory;
         private string _packagesFolder;
-        public UnitTestGenerator(string generatedTestClassesDirectory, Factory objectFactory, string packagesFolder)
+        private Type[] _assemblyExportedTypes = new Type[100];
+
+        public UnitTestGenerator(string generatedTestClassesDirectory, string packagesFolder)
         {
             _generatedTestClassesDirectory = generatedTestClassesDirectory;
-            _objectFactory = objectFactory;
             _packagesFolder = packagesFolder;
         }
-
-        private Type[] _assemblyExportedTypes = new Type[100];
 
         public List<string> GenerateUnitTestsForClass(string solutionPath, string generatedUnitTestProject)
         {
@@ -31,85 +29,74 @@ namespace ATOOS.VSExtension.TestGenerator
             // analyze solution, discover basic information about each project
             var solutionAnalyzer = new SolutionAnalyzer(solutionPath);
             var analyedSolution = solutionAnalyzer.AnalyzeSolution();
-
-            // create a compile helper
             CompilerHelper compileHelper = new CompilerHelper(_generatedTestClassesDirectory);
 
             foreach (AnalyzedProject proj in analyedSolution.Projects)
             {
                 if (proj.Name != generatedUnitTestProject)
                 {
-                    var assembly = Assembly.LoadFile(proj.OutputFilePath); // WHAT IF THE PROJECT IS NOT COMPILED ??
+                    var assembly = Assembly.LoadFile(proj.OutputFilePath);
                     _assemblyExportedTypes = assembly.GetExportedTypes();
 
                     foreach (Type type in _assemblyExportedTypes)
                     {
-                        // ****************************************************************************************************
-                        // extract this into a separate method
-                        // create a code unit
-                        CodeCompileUnit codeUnit = new CodeCompileUnit();
-
-                        // create a namespace
-                        CodeNamespace codeUnitNamespace = new CodeNamespace(string.Format("{0}.UnitTestsNamespace", type.Name));
-                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport("System"));
-                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport("NUnit.Framework"));
-                        codeUnitNamespace.Imports.Add(new CodeNamespaceImport(proj.Name));
-
-                        // create a class
-                        CodeTypeDeclaration targetClass = new CodeTypeDeclaration(string.Format("{0}UnitTestsClass", type.Name))
+                        if (!type.IsInterface)
                         {
-                            IsClass = true,
-                            TypeAttributes = TypeAttributes.Public
-                        };
-                        codeUnitNamespace.Types.Add(targetClass);
-                        codeUnit.Namespaces.Add(codeUnitNamespace);
-
-                        string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
-                        // ****************************************************************************************************
-
-                        // GENERATE A UNIT TEST FOR EACH METHOD
-                        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                        foreach (MethodInfo m in methods)
-                        {
-                            // generate method parameters
-                            var methodParameters = m.GetParameters();
-                            //var parameters = new List<object>();
-                            CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
-                            int j = 0;
-                            foreach (ParameterInfo p in methodParameters)
+                            // create a class
+                            CodeTypeDeclaration targetClass = new CodeTypeDeclaration(string.Format("{0}UnitTestsClass", type.Name))
                             {
-                                if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                                IsClass = true,
+                                TypeAttributes = TypeAttributes.Public
+                            };
+
+                            // create a code unit
+                            CodeCompileUnit codeUnit = CreateCodeCompileUnit(proj.Name, type.Name, targetClass);
+                            string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
+
+                            // generate the unit test class constructor in which all the external dependencies/calls will be mocked
+                            AddTestClassConstructor(classSourceName, targetClass, type);
+
+                            // GENERATE A UNIT TEST FOR EACH METHOD
+                            var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                            foreach (MethodInfo m in methods)
+                            {
+                                // randomly generate method parameters
+                                var methodParameters = m.GetParameters();
+                                CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
+                                int j = 0;
+                                foreach (ParameterInfo p in methodParameters)
                                 {
-                                    parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                                    if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                                    {
+                                        parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                                    }
+                                    else
+                                    {
+                                        CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
+                                        parameters[j] = createObjectExpression;
+                                    }
+                                    j++;
                                 }
-                                else
-                                {
-                                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
-                                    parameters[j] = createObjectExpression;
-                                }
-                                //var instance = ResolveParameter(p.ParameterType.Name);
-                                //parameters.Add(instance);
-                                j++;
+
+                                AddTestIfResultIsNotNullTest(targetClass, m.Name, parameters, type);
                             }
 
-                            _objectFactory.Instances.TryGetValue(type.Name, out object objectInstance);
-                            AddUnitTestToTestClass(targetClass, m.Name, parameters, type, objectInstance);
-                        }
+                            // Generate the c# code
+                            string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
 
-                        // Generate the c# code
-                        string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
-
-                        // Compile the above generated code into a DLL
-                        bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
+                            // Compile the above generated code into a DLL
+                            bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                         {
                             string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
                             string.Format("{0}\\{1}", _packagesFolder, "Moq.4.7.145\\lib\\net45\\Moq.dll"),
-                            proj.OutputFilePath
+                            proj.OutputFilePath,
+                            typeof(System.Linq.Enumerable).Assembly.Location
                         });
 
-                        if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
-                        {
-                            generatedTestClasses.Add(generatedTestClassPath);
+                            if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
+                            {
+                                generatedTestClasses.Add(generatedTestClassPath);
+                            }
                         }
                     }
                 }
@@ -118,41 +105,116 @@ namespace ATOOS.VSExtension.TestGenerator
             return generatedTestClasses;
         }
 
-        private void AddUnitTestToTestClass(CodeTypeDeclaration targetClass, string methodName,
-            CodeExpression[] methodParameters, Type targetType, object objectInstance)
+        private void AddTestClassConstructor(string constructorName, CodeTypeDeclaration targetClass, Type type)
         {
-            // unit test name/structure
-            CodeMemberMethod testMethod = new CodeMemberMethod
+            CodeConstructor testClassConstructor = new CodeConstructor()
             {
-                Attributes = MemberAttributes.Public,
-                Name = string.Format("{0}_{1}_{2}", methodName, "RandomInput", "NotNullResult"),
-                ReturnType = new CodeTypeReference(typeof(void)),
-                CustomAttributes =
-                {
-                    new CodeAttributeDeclaration
-                    {
-                        Name = "TestCase"
-                    }
-                }
+                Name = constructorName,
+                Attributes = MemberAttributes.Public
             };
 
-            // build unit test code block
-            // 1. act part, create the method invocation statement
+            var targetTypeConstrucor = type.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
+            {
+                if (pi.ParameterType.Name != "String" && pi.ParameterType.Name != "Int32" && pi.ParameterType.IsClass) // can be mocked
+                { 
+                    // - globally declare a mock object for each dependency to be mocked 
+                    // example -- private Mock<ObjectToBeMocked> _objectMock;
+                    
+                    var implementedInterfaces = pi.ParameterType.GetInterfaces().ToList();
+                    if (implementedInterfaces.Count != 0)
+                    {
+                        Dictionary<string, string> globallyDeclaredObjects = new Dictionary<string, string>();
+                        foreach (Type implementedInterface in implementedInterfaces)
+                        {
+                            var mockTypeName = string.Format("Mock<{0}>", implementedInterface.Name);
+                            var mockObjectName = string.Format("{0}Mock", implementedInterface.Name);
+                            globallyDeclaredObjects.Add(mockObjectName, mockTypeName);
+
+                            CodeMemberField mockedObjectDeclaration = new CodeMemberField(mockTypeName, mockObjectName)
+                            {
+                                Attributes = MemberAttributes.Public
+                            };
+
+                            targetClass.Members.Add(mockedObjectDeclaration);
+                        }
+
+                        // - inside the constructor, instantiate all the above declared mocked objects
+                        // example -- _objectMock = new Mock<ObjectToBeMocked>();
+                        foreach (string key in globallyDeclaredObjects.Keys)
+                        {
+                            CodeObjectCreateExpression createMockObjectExpression =
+                                new CodeObjectCreateExpression(globallyDeclaredObjects[key]);
+
+                            CodeAssignStatement mockedObjectCreationStatement = new CodeAssignStatement(
+                                new CodeVariableReferenceExpression(key), createMockObjectExpression);
+
+                            testClassConstructor.Statements.Add(mockedObjectCreationStatement);
+                        }
+                    }
+                }
+                else //if(pi.ParameterType.IsInterface)
+                {
+                    // interface -- find all exported types that implement that interface
+                    List<Type> interfaceTypes = (from t in _assemblyExportedTypes
+                                                 where !t.IsInterface && !t.IsAbstract
+                                                 where pi.ParameterType.IsAssignableFrom(t)
+                                                 select t).ToList();
+
+                    //if (interfaceTypes.Count != 0)
+                    //{
+                    //    return CreateCustomType(interfaceTypes.FirstOrDefault().Name);
+                    //}
+                    //else
+                    //{
+                    //    throw new Exception(string.Format("Can not find a type that implements : ", typeToResolve));
+                    //}
+                }
+            }
+
+            // - for each discovered/mockable method in type ObjectToBeMocked,
+            // - build the mocking statement (including the lambda expression),
+            // - generate the mocked method result in a random fashion
+            // - save into a dictionary<MethodName, MockedResult> in order to 
+            //   use them later at the ASSERT phase when the unit tests will be build
+            // - add all the above created statements to the constructor
+
+            // - for each mocked method, generate a new unit test method in which to test the mocking logic
+
+            // done!
+            targetClass.Members.Add(testClassConstructor);
+        }
+
+        private CodeCompileUnit CreateCodeCompileUnit(string projectName, string typeName, CodeTypeDeclaration targetClass)
+        {
+            CodeCompileUnit codeUnit = new CodeCompileUnit();
+
+            // create a namespace
+            CodeNamespace codeUnitNamespace = new CodeNamespace(string.Format("{0}.UnitTestsNamespace", typeName));
+            codeUnitNamespace.Imports.Add(new CodeNamespaceImport("System"));
+            codeUnitNamespace.Imports.Add(new CodeNamespaceImport("NUnit.Framework"));
+            codeUnitNamespace.Imports.Add(new CodeNamespaceImport("Moq"));
+            codeUnitNamespace.Imports.Add(new CodeNamespaceImport(projectName));
+            
+            codeUnitNamespace.Types.Add(targetClass);
+            codeUnit.Namespaces.Add(codeUnitNamespace);
+
+            return codeUnit;
+        }
+
+        private void AddTestIfResultIsNotNullTest(CodeTypeDeclaration targetClass, string methodName, CodeExpression[] methodParameters, Type targetType)
+        {
+            // generate test method name
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName);
+            
+            // ACT, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
-            //CodeExpression[] methodInvokeParameters = new CodeExpression[methodParameters.Length];
-            //int i = 0;
-            //foreach(object p in methodParameters)
-            //{
-            //    methodInvokeParameters[i] = methodParameters[i];
-            //    i++;
-            //}
 
             var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
             CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
             var j = 0;
             foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
             {
-                var resolvedParameter = ResolveParameter(pi.ParameterType.Name);
                 if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
                 {
                     ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
@@ -169,39 +231,30 @@ namespace ATOOS.VSExtension.TestGenerator
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
 
             // declare result variable
-            CodeVariableDeclarationStatement variableDeclaration =
-                new CodeVariableDeclarationStatement(
-                    // Type of the variable to declare.
-                    typeof(object),
-                    // Name of the variable to declare.
-                    "result");
+            CodeVariableDeclarationStatement variableDeclaration = new CodeVariableDeclarationStatement(
+                    typeof(object),  // Type of the variable to declare.
+                    "result");      // Name of the variable to declare.
 
-            invokeMethodExpression =
-                new CodeMethodInvokeExpression(
-                    // targetObject that contains the method to invoke.
-                    mthodInvokeTargetObject,
-                    // methodName indicates the method to invoke.
-                    methodName,
-                    // parameters array contains the parameters for the method.
-                    methodParameters);
+            invokeMethodExpression = new CodeMethodInvokeExpression(
+                    mthodInvokeTargetObject,  // targetObject that contains the method to invoke.
+                    methodName,              // methodName indicates the method to invoke.
+                    methodParameters);      // parameters array contains the parameters for the method.
+
             CodeAssignStatement assignMethodInvocatonResult = new CodeAssignStatement(
                 new CodeVariableReferenceExpression("result"), invokeMethodExpression);
 
 
-            // 2. assert part, create the result not null assertion statement
+            // ASSERT, create the result not null assertion statement
             CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
             CodeExpression[] assertNotNullParameters = new CodeExpression[1];
             assertNotNullParameters[0] = assignMethodInvocatonResult.Left;
-            assertNotNullStatement.Expression =
-                new CodeMethodInvokeExpression(
-                    // targetObject that contains the method to invoke.
-                    new CodeTypeReferenceExpression("Assert"),
-                    // methodName indicates the method to invoke.
-                    "NotNull",
-                    // parameters array contains the parameters for the method.
-                    assertNotNullParameters);
+            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
+                    "NotNull",                                // methodName indicates the method to invoke.
+                    assertNotNullParameters);                // parameters array contains the parameters for the method.
 
 
+            // add the above created expressions to the testMethod
             testMethod.Statements.Add(variableDeclaration);
             testMethod.Statements.Add(assignMethodInvocatonResult);
             testMethod.Statements.Add(assertNotNullStatement);
@@ -209,7 +262,84 @@ namespace ATOOS.VSExtension.TestGenerator
             targetClass.Members.Add(testMethod);
         }
 
+        private CodeMemberMethod CreateTestMethodSignature(string methodName)
+        {
+            CodeMemberMethod testMethod = new CodeMemberMethod
+            {
+                Attributes = MemberAttributes.Public,
+                Name = string.Format("{0}_{1}_{2}", methodName, "RandomInput", "NotNullResult"),
+                ReturnType = new CodeTypeReference(typeof(void)),
+                CustomAttributes =
+                {
+                    new CodeAttributeDeclaration
+                    {
+                        Name = "TestCase"
+                    }
+                }
+            };
+
+            return testMethod;
+        }
+
         #region Private functionality
+
+        private CodeObjectCreateExpression CreateCustomType(string typeToResolve)
+        {
+            Type typeToResolveInfo = _assemblyExportedTypes.Where(aet => aet.Name == typeToResolve).FirstOrDefault();
+
+            if (typeToResolveInfo != null)
+            {
+                if (typeToResolveInfo.IsClass)
+                {
+                    var typeToResolveConstructor = typeToResolveInfo.GetConstructors()
+                        .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+
+                    CodeExpression[] ctorParams = new CodeExpression[typeToResolveConstructor.GetParameters().Length];
+                    var j = 0;
+                    foreach (ParameterInfo pi in typeToResolveConstructor.GetParameters())
+                    {
+                        if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
+                        {
+                            ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                        }
+                        else
+                        {
+                            CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+                            ctorParams[j] = createObjectExpression;
+                        }
+                        //ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                        j++;
+                    }
+
+                    CodeObjectCreateExpression objectCreationExpression =
+                        new CodeObjectCreateExpression(typeToResolveInfo.FullName, ctorParams);
+
+                    return objectCreationExpression;
+                }
+                else //if(typeToResolveInfo.IsInterface)
+                {
+                    // interface -- find all exported types that implement that interface
+                    List<Type> interfaceTypes = (from t in _assemblyExportedTypes
+                                         where !t.IsInterface && !t.IsAbstract
+                                         where typeToResolveInfo.IsAssignableFrom(t)
+                                         select t).ToList();
+
+                    if (interfaceTypes.Count != 0)
+                    {
+                        return CreateCustomType(interfaceTypes.FirstOrDefault().Name);
+                    }
+                    else
+                    {
+                        throw new Exception(string.Format("Can not find a type that implements : ", typeToResolve));
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception(string.Format("Can not resolve type : ", typeToResolve));
+            }
+        }
+
         private object ResolveParameter(string typeToResolve)
         {
             switch (typeToResolve)
@@ -218,29 +348,8 @@ namespace ATOOS.VSExtension.TestGenerator
                     return GetRandomString();
                 case "Int32":
                     return GetRandomInteger();
-                default:
-                    //_objectFactory._instances.TryGetValue(typeToResolve, out object objectInstance);
-                    return null;
+                default: throw new Exception(string.Format("Can not resolve type : ", typeToResolve));
             }
-        }
-
-        private CodeObjectCreateExpression CreateCustomType(string typeToResolve)
-        {
-            Type typeToResolveInfo = _assemblyExportedTypes.Where(aet => aet.Name == typeToResolve).FirstOrDefault();
-            var typeToResolveConstructor = typeToResolveInfo.GetConstructors()
-                .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            CodeExpression[] ctorParams = new CodeExpression[typeToResolveConstructor.GetParameters().Length];
-            var j = 0;
-            foreach (ParameterInfo pi in typeToResolveConstructor.GetParameters())
-            {
-                ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                j++;
-            }
-
-            CodeObjectCreateExpression objectCreationExpression =
-                new CodeObjectCreateExpression(typeToResolveInfo.FullName, ctorParams);
-
-            return objectCreationExpression;
         }
 
         private int GetRandomInteger()

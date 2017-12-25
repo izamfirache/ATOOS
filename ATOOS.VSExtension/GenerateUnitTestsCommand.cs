@@ -66,35 +66,29 @@ namespace ATOOS.VSExtension
             var unitTestProjectName = string.Format("{0}_Tests", GetSelectedProjectName(dte));
 
             // discover solution/project types and create an object factory
-            Factory objectFactory = new Factory();
             var solutionFullPath = GetSolutionFullPath(dte);
-            objectFactory.DiscoverAllSolutionTypes(solutionFullPath);
 
             // generate unit tests for the analyzed project
-            if (objectFactory.Instances.Count != 0)
+            var generatedTestClassesDirectory = CreateUnitTestsProject(dte, unitTestProjectName);
+            string packagesPath = GetSolutionPackagesFolder(dte);
+
+            var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory, packagesPath);
+            List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, unitTestProjectName);
+
+            // add test classes to project
+            string csprojPath = string.Format(@"{0}\\{1}\\{2}{3}", GetSolutionPath(dte), 
+                unitTestProjectName, unitTestProjectName, ".csproj");
+
+            var p = new Microsoft.Build.Evaluation.Project(csprojPath);
+            foreach (string generatedTestClass in testClasses)
             {
-                // create an empty Unit Test project and return a path to the created project
-                var generatedTestClassesDirectory = CreateUnitTestsProject(dte, unitTestProjectName);
-                string packagesPath = GetSolutionPackagesFolder(dte);
-
-                var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory, objectFactory, packagesPath);
-                List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, unitTestProjectName);
-
-                // add test classes to project
-                string csprojPath = string.Format(@"{0}\\{1}\\{2}{3}", GetSolutionPath(dte), 
-                    unitTestProjectName, unitTestProjectName, ".csproj");
-
-                var p = new Microsoft.Build.Evaluation.Project(csprojPath);
-                foreach (string generatedTestClass in testClasses)
-                {
-                    p.AddItem("Compile", generatedTestClass);
-                }
-                p.Save();
-
-                MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " +
-                        "package manually on the created project, reload/build solution and run the generated unit tests " +
-                        "in the Unit Test Explorer window.", "Unit Test setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                p.AddItem("Compile", generatedTestClass);
             }
+            p.Save();
+
+            MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " +
+                    "package manually on the created project, reload/build solution and run the generated unit tests " +
+                    "in the Unit Test Explorer window.", "Unit Test setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private string GetSelectedProjectName(DTE2 dte)
@@ -112,12 +106,7 @@ namespace ATOOS.VSExtension
                 CreateUnitTestProject(dte, unitTestProjectName);
                 
                 string packagesPath = GetSolutionPackagesFolder(dte);
-                var nunitFrameworkDllFimePath = string.Format("{0}\\{1}", packagesPath, 
-                    "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll");
-                if (!File.Exists(nunitFrameworkDllFimePath))
-                {
-                    InstallNeededNugetPackage(packagesPath);
-                }
+                InstallNeededNugetPackage(packagesPath);
 
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
                 var projectPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), unitTestProjectName);
@@ -153,6 +142,10 @@ namespace ATOOS.VSExtension
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
                         "Moq.4.7.145\\lib\\net45\\Moq.dll"));
+
+                    //var systemCoreDllPath = typeof(System.Linq.Enumerable).Assembly.Location;
+                    //vsProject.References.Add(systemCoreDllPath);
+                    
 
                     foreach (Project project in currentSolution.Projects)
                     {
@@ -219,8 +212,21 @@ namespace ATOOS.VSExtension
                     .CreateRepository("https://packages.nuget.org/api/v2");
 
                 PackageManager packageManager = new PackageManager(repo, installPath);
-                packageManager.InstallPackage(NunitPackageID);
-                packageManager.InstallPackage(MoqPackageID);
+
+                var nunitFrameworkDllFilePath = string.Format("{0}\\{1}", installPath,
+                    "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll");
+
+                if (!File.Exists(nunitFrameworkDllFilePath))
+                {
+                    packageManager.InstallPackage(NunitPackageID);
+                }
+
+                var moqFilePath = string.Format("{0}\\{1}", installPath,
+                        "Moq.4.7.145\\lib\\net45\\Moq.dll");
+                if (!File.Exists(moqFilePath))
+                {
+                    packageManager.InstallPackage(MoqPackageID);
+                }
             }
             catch (Exception e)
             {
