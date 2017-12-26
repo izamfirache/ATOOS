@@ -40,24 +40,29 @@ namespace ATOOS.VSExtension.TestGenerator
 
                     foreach (Type type in _assemblyExportedTypes)
                     {
-                        if (!type.IsInterface)
+                        if (!type.IsInterface) // don't want to write unit tests for interfaces
                         {
                             // create a class
-                            CodeTypeDeclaration targetClass = new CodeTypeDeclaration(string.Format("{0}UnitTestsClass", type.Name))
+                            CodeTypeDeclaration targetClass = new CodeTypeDeclaration
+                                (string.Format("{0}UnitTestsClass", type.Name))
                             {
                                 IsClass = true,
                                 TypeAttributes = TypeAttributes.Public
                             };
 
-                            // create a code unit
+                            // create a code unit (the in-memory representation of a class)
                             CodeCompileUnit codeUnit = CreateCodeCompileUnit(proj.Name, type.Name, targetClass);
                             string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
 
-                            // generate the unit test class constructor in which all the external dependencies/calls will be mocked
+                            // generate the constructor for the unit test class in which all the 
+                            // external dependencies/calls will be mocked
                             AddTestClassConstructor(classSourceName, targetClass, type);
 
-                            // GENERATE A UNIT TEST FOR EACH METHOD
-                            var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                            // generate a unit test for each method
+                            // the method will be called and a NotNull assertion will be added
+                            var methods = type.GetMethods(BindingFlags.Public 
+                                | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
                             foreach (MethodInfo m in methods)
                             {
                                 // randomly generate method parameters
@@ -66,6 +71,7 @@ namespace ATOOS.VSExtension.TestGenerator
                                 int j = 0;
                                 foreach (ParameterInfo p in methodParameters)
                                 {
+                                    // TODO: Rethink this !!!
                                     if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
                                     {
                                         parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
@@ -81,10 +87,10 @@ namespace ATOOS.VSExtension.TestGenerator
                                 AddTestIfResultIsNotNullTest(targetClass, m.Name, parameters, type);
                             }
 
-                            // Generate the c# code
+                            // generate the c# code based on the created code unit
                             string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
 
-                            // Compile the above generated code into a DLL
+                            // compile the above generated code into a DLL/EXE
                             bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                         {
                             string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
@@ -107,68 +113,56 @@ namespace ATOOS.VSExtension.TestGenerator
 
         private void AddTestClassConstructor(string constructorName, CodeTypeDeclaration targetClass, Type type)
         {
+            // create a code unit for a consturctor
             CodeConstructor testClassConstructor = new CodeConstructor()
             {
                 Name = constructorName,
                 Attributes = MemberAttributes.Public
             };
 
-            var targetTypeConstrucor = type.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
+            // decide if this type has a mockable parameter
+            // ex: a custom object wich implements an interface or has virtual methods
+            // if yes -- mock all methods that can be mocked
+            // if not -- nothing to be done
+
+            var targetTypeConstructor = type.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            foreach (ParameterInfo pi in targetTypeConstructor.GetParameters())
             {
-                if (pi.ParameterType.Name != "String" && pi.ParameterType.Name != "Int32" && pi.ParameterType.IsClass) // can be mocked
+                if (pi.ParameterType.Name != "String" 
+                    && pi.ParameterType.Name != "Int32" 
+                    && pi.ParameterType.IsClass) // it is a non-primitive class, TODO: rethink this!
                 { 
-                    // - globally declare a mock object for each dependency to be mocked 
-                    // example -- private Mock<ObjectToBeMocked> _objectMock;
-                    
+                    // check if it implements an interface
                     var implementedInterfaces = pi.ParameterType.GetInterfaces().ToList();
                     if (implementedInterfaces.Count != 0)
                     {
+                        // - globally declare a mock object for each dependency to be mocked 
+                        // example -- private Mock<ObjectToBeMocked> _objectMock;
+
+                        // mock each interface ???
                         Dictionary<string, string> globallyDeclaredObjects = new Dictionary<string, string>();
                         foreach (Type implementedInterface in implementedInterfaces)
                         {
                             var mockTypeName = string.Format("Mock<{0}>", implementedInterface.Name);
                             var mockObjectName = string.Format("{0}Mock", implementedInterface.Name);
-                            globallyDeclaredObjects.Add(mockObjectName, mockTypeName);
-
-                            CodeMemberField mockedObjectDeclaration = new CodeMemberField(mockTypeName, mockObjectName)
-                            {
-                                Attributes = MemberAttributes.Public
-                            };
-
-                            targetClass.Members.Add(mockedObjectDeclaration);
+                            AddMockObjectDeclarationToConstructor(targetClass, mockTypeName, mockObjectName);
+                            globallyDeclaredObjects.Add(mockObjectName, mockTypeName);  
                         }
 
                         // - inside the constructor, instantiate all the above declared mocked objects
                         // example -- _objectMock = new Mock<ObjectToBeMocked>();
                         foreach (string key in globallyDeclaredObjects.Keys)
                         {
-                            CodeObjectCreateExpression createMockObjectExpression =
-                                new CodeObjectCreateExpression(globallyDeclaredObjects[key]);
-
-                            CodeAssignStatement mockedObjectCreationStatement = new CodeAssignStatement(
-                                new CodeVariableReferenceExpression(key), createMockObjectExpression);
-
-                            testClassConstructor.Statements.Add(mockedObjectCreationStatement);
+                            AddMockObjectInstantiationToConstructor(testClassConstructor, key, globallyDeclaredObjects[key]);
                         }
                     }
                 }
-                else //if(pi.ParameterType.IsInterface)
+                else if(pi.ParameterType.IsInterface)
                 {
-                    // interface -- find all exported types that implement that interface
-                    List<Type> interfaceTypes = (from t in _assemblyExportedTypes
-                                                 where !t.IsInterface && !t.IsAbstract
-                                                 where pi.ParameterType.IsAssignableFrom(t)
-                                                 select t).ToList();
-
-                    //if (interfaceTypes.Count != 0)
-                    //{
-                    //    return CreateCustomType(interfaceTypes.FirstOrDefault().Name);
-                    //}
-                    //else
-                    //{
-                    //    throw new Exception(string.Format("Can not find a type that implements : ", typeToResolve));
-                    //}
+                    var mockTypeName = string.Format("Mock<{0}>", pi.ParameterType.Name);
+                    var mockObjectName = string.Format("{0}Mock", pi.ParameterType.Name);
+                    AddMockObjectDeclarationToConstructor(targetClass, mockTypeName, mockObjectName);
+                    AddMockObjectInstantiationToConstructor(testClassConstructor, mockObjectName, mockTypeName);
                 }
             }
 
@@ -183,6 +177,27 @@ namespace ATOOS.VSExtension.TestGenerator
 
             // done!
             targetClass.Members.Add(testClassConstructor);
+        }
+
+        private void AddMockObjectInstantiationToConstructor(CodeConstructor testClassConstructor, string mockObjectName, string mockTypeName)
+        {
+            CodeObjectCreateExpression createMockObjectExpression =
+                                new CodeObjectCreateExpression(mockTypeName);
+
+            CodeAssignStatement mockedObjectCreationStatement = new CodeAssignStatement(
+                new CodeVariableReferenceExpression(mockObjectName), createMockObjectExpression);
+
+            testClassConstructor.Statements.Add(mockedObjectCreationStatement);
+        }
+
+        private void AddMockObjectDeclarationToConstructor(CodeTypeDeclaration targetClass, string mockTypeName, string mockObjectName)
+        {
+            CodeMemberField mockedObjectDeclaration = new CodeMemberField(mockTypeName, mockObjectName)
+            {
+                Attributes = MemberAttributes.Private
+            };
+
+            targetClass.Members.Add(mockedObjectDeclaration);
         }
 
         private CodeCompileUnit CreateCodeCompileUnit(string projectName, string typeName, CodeTypeDeclaration targetClass)

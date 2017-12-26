@@ -44,9 +44,9 @@ namespace NUnitRunnerProjectDemo
             return Surname;
         }
 
-        public int GetClientSalary(Client employee)
+        public int GetClientSalary(Client client)
         {
-            if (employee.Age > 10)
+            if (client.Age > 10)
             {
                 return 1000;
             }
