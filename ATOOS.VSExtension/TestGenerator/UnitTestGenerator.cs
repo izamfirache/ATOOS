@@ -94,7 +94,7 @@ namespace ATOOS.VSExtension.TestGenerator
                             bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                         {
                             string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
-                            string.Format("{0}\\{1}", _packagesFolder, "Moq.4.7.145\\lib\\net45\\Moq.dll"),
+                            string.Format("{0}\\{1}", _packagesFolder, "Moq.4.8.0\\lib\\net45\\Moq.dll"),
                             proj.OutputFilePath,
                             typeof(System.Linq.Enumerable).Assembly.Location
                         });
