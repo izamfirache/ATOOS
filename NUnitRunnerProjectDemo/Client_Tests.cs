@@ -21,7 +21,9 @@ namespace NUnitRunnerProjectDemo
             //_employeeMock.Setup(m => m.GetEmployeeName()).Returns("MockedName");
             _employeeMock.Setup(m => m.GetEmployeeSurname()).Returns("MockedSurname");
             _employeeMock.Setup(m => m.GetEmployeeAge()).Returns(99);
-            
+            _employeeMock.Setup(m => m.GetEmployeeInfo(It.IsAny<String>(), It.IsAny<String>(), 
+                It.IsAny<Int32>())).Returns("");
+
             // dynamically generate the code for a lamda expression
             var parameter = Expression.Parameter(typeof(IEmployee), "m");
             MethodInfo methodInfo = typeof(IEmployee).GetMethod("GetEmployeeName");
@@ -29,7 +31,8 @@ namespace NUnitRunnerProjectDemo
             var getEmployeeNameLambdaExpr = 
                 Expression.Lambda<Func<IEmployee, string>>(methodCall, parameter); // m => m.GetEmployeeName()
 
-            _employeeMock.Setup(getEmployeeNameLambdaExpr).Returns("MockedName");
+            var x = _employeeMock.Setup(getEmployeeNameLambdaExpr);
+            x.Returns("MockedName");
         }
 
         [TestCase()]

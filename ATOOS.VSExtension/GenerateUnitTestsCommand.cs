@@ -141,7 +141,7 @@ namespace ATOOS.VSExtension
 
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
-                        "Moq.*\\lib\\net45\\Moq.dll")); // TODO: use regular expressions here for versioning
+                        "Moq.4.8.0\\lib\\net45\\Moq.dll")); // TODO: use regular expressions here for versioning
 
                     //var systemCoreDllPath = typeof(System.Linq.Enumerable).Assembly.Location;
                     //vsProject.References.Add(systemCoreDllPath);

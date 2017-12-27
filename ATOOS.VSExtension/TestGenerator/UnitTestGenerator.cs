@@ -1,9 +1,11 @@
 ﻿using ATOOS.VSExtension.ATOOS.Core;
 using ATOOS.VSExtension.ObjectFactory;
+using Moq;
 using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -146,14 +148,15 @@ namespace ATOOS.VSExtension.TestGenerator
                             var mockTypeName = string.Format("Mock<{0}>", implementedInterface.Name);
                             var mockObjectName = string.Format("{0}Mock", implementedInterface.Name);
                             AddMockObjectDeclarationToConstructor(targetClass, mockTypeName, mockObjectName);
-                            globallyDeclaredObjects.Add(mockObjectName, mockTypeName);  
-                        }
+                            globallyDeclaredObjects.Add(mockObjectName, mockTypeName);
 
-                        // - inside the constructor, instantiate all the above declared mocked objects
-                        // example -- _objectMock = new Mock<ObjectToBeMocked>();
-                        foreach (string key in globallyDeclaredObjects.Keys)
-                        {
-                            AddMockObjectInstantiationToConstructor(testClassConstructor, key, globallyDeclaredObjects[key]);
+                            // - inside the constructor, instantiate all the above declared mocked objects
+                            // example -- _objectMock = new Mock<ObjectToBeMocked>();
+                            AddMockObjectInstantiationToConstructor(testClassConstructor, mockObjectName, mockTypeName);
+
+                            MockAllExternalDependencyMethods(implementedInterface, testClassConstructor);
+
+                            // - for each mocked method, generate a new unit test method in which to test the mocking logic
                         }
                     }
                 }
@@ -163,20 +166,56 @@ namespace ATOOS.VSExtension.TestGenerator
                     var mockObjectName = string.Format("{0}Mock", pi.ParameterType.Name);
                     AddMockObjectDeclarationToConstructor(targetClass, mockTypeName, mockObjectName);
                     AddMockObjectInstantiationToConstructor(testClassConstructor, mockObjectName, mockTypeName);
+
+                    MockAllExternalDependencyMethods(pi.ParameterType, testClassConstructor);
+
+                    // - for each mocked method, generate a new unit test method in which to test the mocking logic
                 }
             }
 
-            // - for each discovered/mockable method in type ObjectToBeMocked,
-            // - build the mocking statement (including the lambda expression),
-            // - generate the mocked method result in a random fashion
-            // - save into a dictionary<MethodName, MockedResult> in order to 
-            //   use them later at the ASSERT phase when the unit tests will be build
-            // - add all the above created statements to the constructor
-
-            // - for each mocked method, generate a new unit test method in which to test the mocking logic
-
             // done!
             targetClass.Members.Add(testClassConstructor);
+        }
+
+        private void MockAllExternalDependencyMethods(Type type, CodeConstructor testClassConstructor)
+        {
+            // - for each discovered/mockable method in type ObjectToBeMocked
+            var methods = type.GetMethods(BindingFlags.Public
+                            | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+            foreach (MethodInfo m in methods)
+            {
+                // dynamically generate the code for a lamda expression
+                var parameter = Expression.Parameter(type, "m");
+                MethodInfo methodInfo = type.GetMethod(m.Name);
+
+                // randomly generate method parameters
+                var methodParameters = m.GetParameters();
+                string parameters = "";
+                int j = 1;
+                foreach (ParameterInfo p in methodParameters)
+                {
+                    var separator = j == methodParameters.Count() ? "" : ", ";
+                    parameters += string.Format("It.IsAny<{0}>()", p.ParameterType) + separator;
+                    j++;
+                }
+
+                var lambdaExpr = string.Format("m => m.{0}({1})", m.Name, parameters);
+                var mockSetupMethod = new CodeMethodInvokeExpression(
+                    new CodeVariableReferenceExpression(string.Format("{0}Mock", type.Name)),
+                    "Setup", new CodeSnippetExpression(lambdaExpr));
+
+                // resolve method return type
+                var methodReturnType = m.ReturnType.Name;
+                CodeExpression[] mockReturnMethodParameter = new CodeExpression[1];
+                mockReturnMethodParameter[0] = new CodePrimitiveExpression(ResolveParameter(methodReturnType));
+
+                var mockReturnMethod = new CodeMethodInvokeExpression(
+                    mockSetupMethod,
+                    "Returns", mockReturnMethodParameter);
+
+                testClassConstructor.Statements.Add(mockReturnMethod);
+            }
         }
 
         private void AddMockObjectInstantiationToConstructor(CodeConstructor testClassConstructor, string mockObjectName, string mockTypeName)
@@ -245,24 +284,24 @@ namespace ATOOS.VSExtension.TestGenerator
             CodeObjectCreateExpression mthodInvokeTargetObject =
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
 
-            // declare result variable
-            CodeVariableDeclarationStatement variableDeclaration = new CodeVariableDeclarationStatement(
-                    typeof(object),  // Type of the variable to declare.
-                    "result");      // Name of the variable to declare.
-
             invokeMethodExpression = new CodeMethodInvokeExpression(
                     mthodInvokeTargetObject,  // targetObject that contains the method to invoke.
                     methodName,              // methodName indicates the method to invoke.
                     methodParameters);      // parameters array contains the parameters for the method.
 
-            CodeAssignStatement assignMethodInvocatonResult = new CodeAssignStatement(
-                new CodeVariableReferenceExpression("result"), invokeMethodExpression);
+            // declare result variable
+            CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
+                    typeof(object), "result", invokeMethodExpression);
+
+            
+            //CodeAssignStatement assignMethodInvocatonResult = new CodeAssignStatement(
+            //    new CodeVariableReferenceExpression("result"), invokeMethodExpression);
 
 
             // ASSERT, create the result not null assertion statement
             CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
             CodeExpression[] assertNotNullParameters = new CodeExpression[1];
-            assertNotNullParameters[0] = assignMethodInvocatonResult.Left;
+            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result");// assignMethodInvocatonResult.Left;
             assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
                     new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
                     "NotNull",                                // methodName indicates the method to invoke.
@@ -270,7 +309,7 @@ namespace ATOOS.VSExtension.TestGenerator
 
 
             // add the above created expressions to the testMethod
-            testMethod.Statements.Add(variableDeclaration);
+            //testMethod.Statements.Add(variableDeclaration);
             testMethod.Statements.Add(assignMethodInvocatonResult);
             testMethod.Statements.Add(assertNotNullStatement);
 
