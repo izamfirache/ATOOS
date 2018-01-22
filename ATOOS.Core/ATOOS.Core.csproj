@@ -43,10 +43,12 @@
     <Compile Include="Models\AnalyzedProject.cs" />
     <Compile Include="Models\AnalyzedSolution.cs" />
     <Compile Include="Models\Atribute.cs" />
+    <Compile Include="Models\Body.cs" />
     <Compile Include="Models\Class.cs" />
     <Compile Include="Models\Constructor.cs" />
     <Compile Include="Models\Method.cs" />
     <Compile Include="Models\MethodParameter.cs" />
+    <Compile Include="Models\Statement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

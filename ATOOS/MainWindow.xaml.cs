@@ -10,6 +10,7 @@ using ObjectFactory;
 using DynamicInvoke.Helpers;
 using UnitTestGenerator.Core;
 using System.IO;
+using System.Linq;
 
 namespace ATOOS
 {
@@ -25,7 +26,7 @@ namespace ATOOS
         public MainWindow()
         {
             InitializeComponent();
-            solutionPath.Text = @"c:\dev\TestProject1\TestProject1.sln";
+            solutionPath.Text = @"";
             solutionAnalyzer = new SolutionAnalyzer(solutionPath.Text);
         }
 
@@ -98,7 +99,15 @@ namespace ATOOS
                             {
                                 methodSignature += ')';
                             }
-                            resultBox.AppendText(string.Format("\t\t {0} {1} {2}{3}; \r", m.Accessor, m.ReturnType, m.Name, methodSignature));
+                            resultBox.AppendText(string.Format("\t\t {0} {1} {2}{3} \r", m.Accessor, m.ReturnType, m.Name, methodSignature));
+                            resultBox.AppendText("\t\t{\r");
+
+                            // method body
+                            foreach (Statement st in m.MethodBody.Statements.OrderBy(st => st.Position))
+                            {
+                                resultBox.AppendText(string.Format("\t\t\t {0}", st.Content));
+                            }
+                            resultBox.AppendText("\t\t}\r");
                         }
 
                         // attributes
@@ -106,7 +115,7 @@ namespace ATOOS
                         {
                             resultBox.AppendText(string.Format("\t\t {0} {1} {2}; \r", a.Accessor, a.Type, a.Name));
                         }
-                        resultBox.AppendText("\t}\r");
+                        resultBox.AppendText("\t\t\t}\r");
                     }
                     resultBox.AppendText("}\r");
                     resultBox.AppendText("------------------------------------\r");

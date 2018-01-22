@@ -16,5 +16,6 @@ namespace ATOOS.Core.Models
         public string ReturnType { get; set; }
         public string Accessor { get; set; }
         public List<MethodParameter> Parameters { get; set; }
+        public Body MethodBody { get; set; }
     }
 }
