@@ -59,10 +59,12 @@
     <Compile Include="ATOOS.Core\AnalyzedProject.cs" />
     <Compile Include="ATOOS.Core\AnalyzedSolution.cs" />
     <Compile Include="ATOOS.Core\Attribute.cs" />
+    <Compile Include="ATOOS.Core\Body.cs" />
     <Compile Include="ATOOS.Core\Class.cs" />
     <Compile Include="ATOOS.Core\Constructor.cs" />
     <Compile Include="ATOOS.Core\Method.cs" />
     <Compile Include="ATOOS.Core\MethodParameter.cs" />
+    <Compile Include="ATOOS.Core\Statement.cs" />
     <Compile Include="CodeAnalyzer\BasicMetricsProvider.cs" />
     <Compile Include="CodeAnalyzer\ClassVisitor.cs" />
     <Compile Include="GenerateUnitTestsCommand.cs" />

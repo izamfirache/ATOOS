@@ -1,9 +1,12 @@
 ﻿using ATOOS.VSExtension.ATOOS.Core;
 using ATOOS.VSExtension.ObjectFactory;
+using Microsoft.CodeDom.Providers.DotNetCompilerPlatform;
 using Moq;
 using System;
 using System.CodeDom;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -14,14 +17,18 @@ namespace ATOOS.VSExtension.TestGenerator
 {
     public class UnitTestGenerator
     {
+        // TODO: move each region into its own class
+
         private string _generatedTestClassesDirectory;
         private string _packagesFolder;
         private Type[] _assemblyExportedTypes = new Type[100];
+        private string selectedProjectName;
 
-        public UnitTestGenerator(string generatedTestClassesDirectory, string packagesFolder)
+        public UnitTestGenerator(string generatedTestClassesDirectory, string packagesFolder, string selectedProjectName)
         {
             _generatedTestClassesDirectory = generatedTestClassesDirectory;
             _packagesFolder = packagesFolder;
+            this.selectedProjectName = selectedProjectName;
         }
 
         public List<string> GenerateUnitTestsForClass(string solutionPath, string generatedUnitTestProject)
@@ -58,7 +65,7 @@ namespace ATOOS.VSExtension.TestGenerator
 
                             // generate the constructor for the unit test class in which all the 
                             // external dependencies/calls will be mocked
-                            AddTestClassConstructor(classSourceName, targetClass, type);
+                            AddTestClassConstructor(classSourceName, targetClass, type, analyedSolution);
 
                             // generate a unit test for each method
                             // the method will be called and a NotNull assertion will be added
@@ -86,7 +93,14 @@ namespace ATOOS.VSExtension.TestGenerator
                                     j++;
                                 }
 
+                                // Assert.NotNull(result);
                                 AddTestIfResultIsNotNullTest(targetClass, m.Name, parameters, type);
+
+                                // Assert.NotThrow(() => targetObj.SomePublicMethod())
+                                AddTestShouldNotThrowExceptionTest(targetClass, m.Name, parameters, type);
+
+                                // Assert.AreEqual(result, new object { });
+                                AddTestTheResultShouldbeTheExpectedOne(targetClass, m.Name, parameters, type);
                             }
 
                             // generate the c# code based on the created code unit
@@ -94,12 +108,12 @@ namespace ATOOS.VSExtension.TestGenerator
 
                             // compile the above generated code into a DLL/EXE
                             bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
-                        {
-                            string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
-                            string.Format("{0}\\{1}", _packagesFolder, "Moq.4.8.0\\lib\\net45\\Moq.dll"),
-                            proj.OutputFilePath,
-                            typeof(System.Linq.Enumerable).Assembly.Location
-                        });
+                            {
+                                string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"),
+                                string.Format("{0}\\{1}", _packagesFolder, "Moq.4.8.0\\lib\\net45\\Moq.dll"),
+                                proj.OutputFilePath,
+                                typeof(System.Linq.Enumerable).Assembly.Location
+                            });
 
                             if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
                             {
@@ -113,7 +127,227 @@ namespace ATOOS.VSExtension.TestGenerator
             return generatedTestClasses;
         }
 
-        private void AddTestClassConstructor(string constructorName, CodeTypeDeclaration targetClass, Type type)
+        #region Unit test generation region
+        private void AddTestTheResultShouldbeTheExpectedOne(CodeTypeDeclaration targetClass, string methodName, 
+            CodeExpression[] methodParameters, Type targetType)
+        {
+            // generate test method name
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, "ResultShouldHaveExpectedValue");
+
+            // ACT, create the method invocation statement
+            CodeExpression invokeMethodExpression = new CodeExpression();
+
+            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
+            var j = 0;
+            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
+            {
+                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
+                {
+                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                }
+                else
+                {
+                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+
+                    // declare the resolved parameter
+                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
+                        new CodeVariableDeclarationStatement(
+                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
+
+                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
+
+                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
+                }
+                j++;
+            }
+
+            CodeObjectCreateExpression mthodInvokeTargetObject =
+                new CodeObjectCreateExpression(targetType.FullName, ctorParams);
+
+            // declare the target object
+            CodeVariableDeclarationStatement assignTargetObjectToVariable =
+                new CodeVariableDeclarationStatement(
+                    targetType, targetType.Name.ToLower(), mthodInvokeTargetObject);
+
+            testMethod.Statements.Add(assignTargetObjectToVariable);
+
+            invokeMethodExpression = new CodeMethodInvokeExpression(
+                    // targetObject that contains the method to invoke.
+                    new CodeVariableReferenceExpression(targetType.Name.ToLower()),
+                    methodName,              // methodName indicates the method to invoke.
+                    methodParameters);      // parameters array contains the parameters for the method.
+
+            // declare result variable
+            CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
+                    typeof(object), "result", invokeMethodExpression);
+            testMethod.Statements.Add(assignMethodInvocatonResult);
+
+            // ASSERT, create the result not null assertion statement
+            CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
+            CodeExpression[] assertNotNullParameters = new CodeExpression[2];
+            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result");
+            assertNotNullParameters[1] = new CodeSnippetExpression("new { }");
+
+            CodeComment comment = new CodeComment("Please insert here the expected result", false);
+            CodeCommentStatement commentStatement = new CodeCommentStatement(comment);
+            testMethod.Statements.Add(commentStatement);
+            
+            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
+                    "AreEqual",                                // methodName indicates the method to invoke.
+                    assertNotNullParameters);                // parameters array contains the parameters for the method.
+
+
+            // add the above created expressions to the testMethod
+            testMethod.Statements.Add(assertNotNullStatement);
+
+            targetClass.Members.Add(testMethod);
+        }
+        
+        private void AddTestShouldNotThrowExceptionTest(CodeTypeDeclaration targetClass, string methodName,
+            CodeExpression[] methodParameters, Type targetType)
+        {
+            // generate test method name
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, "CallShouldNotThrowAnyException");
+
+            // ACT, create the method invocation statement
+            CodeExpression invokeMethodExpression = new CodeExpression();
+
+            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
+            var j = 0;
+            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
+            {
+                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
+                {
+                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                }
+                else
+                {
+                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+
+                    // declare the resolved parameter
+                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
+                        new CodeVariableDeclarationStatement(
+                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
+
+                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
+
+                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
+                }
+                j++;
+            }
+
+            // create the target object
+            CodeObjectCreateExpression createTargetObjectExpression =
+                new CodeObjectCreateExpression(targetType.FullName, ctorParams);
+
+            // assign created target object to a variable
+            var targetObjectVariableName = targetType.Name.ToLower();
+            CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
+                    targetType, targetObjectVariableName, createTargetObjectExpression);
+
+            // create the method invocation expression using the above created targetObject
+            invokeMethodExpression = new CodeMethodInvokeExpression(
+                    new CodeVariableReferenceExpression(targetObjectVariableName),  // targetObject that contains the method to invoke.
+                    methodName,              // methodName indicates the method to invoke.
+                    methodParameters);      // parameters array contains the parameters for the method.
+
+            StringWriter writer = new StringWriter();
+            CSharpCodeProvider csProvider = new CSharpCodeProvider();
+            csProvider.GenerateCodeFromExpression(invokeMethodExpression, writer, new CodeGeneratorOptions());
+            string invokeMethodExpressionAsString = writer.ToString();
+
+            // ASSERT
+            var lambdaExpr = string.Format("() => {0}", invokeMethodExpressionAsString);
+            var shouldNotThrowExceptionExpression = new CodeMethodInvokeExpression(
+                new CodeTypeReferenceExpression("Assert"),
+                "DoesNotThrow", 
+                new CodeSnippetExpression(lambdaExpr));
+
+            // add the above created expressions to the testMethod
+            testMethod.Statements.Add(assignMethodInvocatonResult);
+            testMethod.Statements.Add(shouldNotThrowExceptionExpression);
+
+            targetClass.Members.Add(testMethod);
+        }
+
+        private void AddTestIfResultIsNotNullTest(CodeTypeDeclaration targetClass, string methodName,
+            CodeExpression[] methodParameters, Type targetType)
+        {
+            // generate test method name
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, "TheResultShouldNotBeNull");
+
+            // ACT, create the method invocation statement
+            CodeExpression invokeMethodExpression = new CodeExpression();
+
+            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
+            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
+            var j = 0;
+            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
+            {
+                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
+                {
+                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
+                }
+                else
+                {
+                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+
+                    // declare the resolved parameter
+                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
+                        new CodeVariableDeclarationStatement(
+                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
+
+                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
+
+                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
+                }
+                j++;
+            }
+
+            CodeObjectCreateExpression mthodInvokeTargetObject =
+                new CodeObjectCreateExpression(targetType.FullName, ctorParams);
+
+            // declare the target object
+            CodeVariableDeclarationStatement assignTargetObjectToVariable =
+                new CodeVariableDeclarationStatement(
+                    targetType, targetType.Name.ToLower(), mthodInvokeTargetObject);
+
+            testMethod.Statements.Add(assignTargetObjectToVariable);
+
+            invokeMethodExpression = new CodeMethodInvokeExpression(
+                    // targetObject that contains the method to invoke.
+                    new CodeVariableReferenceExpression(targetType.Name.ToLower()),
+                    methodName,              // methodName indicates the method to invoke.
+                    methodParameters);      // parameters array contains the parameters for the method.
+
+            // declare result variable
+            CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
+                    typeof(object), "result", invokeMethodExpression);
+
+            // ASSERT, create the result not null assertion statement
+            CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
+            CodeExpression[] assertNotNullParameters = new CodeExpression[1];
+            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result"); // assignMethodInvocatonResult.Left;
+            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
+                    "NotNull",                                // methodName indicates the method to invoke.
+                    assertNotNullParameters);                // parameters array contains the parameters for the method.
+
+
+            // add the above created expressions to the testMethod
+            testMethod.Statements.Add(assignMethodInvocatonResult);
+            testMethod.Statements.Add(assertNotNullStatement);
+
+            targetClass.Members.Add(testMethod);
+        }
+        #endregion
+
+        #region Constructor generation region
+        private void AddTestClassConstructor(string constructorName, CodeTypeDeclaration targetClass, 
+            Type type, AnalyzedSolution analyzedSolution)
         {
             // create a code unit for a consturctor
             CodeConstructor testClassConstructor = new CodeConstructor()
@@ -154,7 +388,7 @@ namespace ATOOS.VSExtension.TestGenerator
                             // example -- _objectMock = new Mock<ObjectToBeMocked>();
                             AddMockObjectInstantiationToConstructor(testClassConstructor, mockObjectName, mockTypeName);
 
-                            MockAllExternalDependencyMethods(implementedInterface, testClassConstructor);
+                            MockAllExternalDependencyMethods(implementedInterface, testClassConstructor, analyzedSolution, type);
 
                             // - for each mocked method, generate a new unit test method in which to test the mocking logic
                         }
@@ -167,7 +401,7 @@ namespace ATOOS.VSExtension.TestGenerator
                     AddMockObjectDeclarationToConstructor(targetClass, mockTypeName, mockObjectName);
                     AddMockObjectInstantiationToConstructor(testClassConstructor, mockObjectName, mockTypeName);
 
-                    MockAllExternalDependencyMethods(pi.ParameterType, testClassConstructor);
+                    MockAllExternalDependencyMethods(pi.ParameterType, testClassConstructor, analyzedSolution, type);
 
                     // - for each mocked method, generate a new unit test method in which to test the mocking logic
                 }
@@ -177,7 +411,8 @@ namespace ATOOS.VSExtension.TestGenerator
             targetClass.Members.Add(testClassConstructor);
         }
 
-        private void MockAllExternalDependencyMethods(Type type, CodeConstructor testClassConstructor)
+        private void MockAllExternalDependencyMethods(Type type, CodeConstructor testClassConstructor, 
+            AnalyzedSolution analyzedSolution, Type classUnderTestType)
         {
             // - for each discovered/mockable method in type ObjectToBeMocked
             var methods = type.GetMethods(BindingFlags.Public
@@ -185,37 +420,75 @@ namespace ATOOS.VSExtension.TestGenerator
 
             foreach (MethodInfo m in methods)
             {
-                // dynamically generate the code for a lamda expression
-                var parameter = Expression.Parameter(type, "m");
-                MethodInfo methodInfo = type.GetMethod(m.Name);
+                // see if the method should be mocked
+                // -- search in the code for all the methods in the CUT to see if the method is invoked somewhere
+                // --- if yes, then the method should be mocked
+                // --- if no, then that method is not used and it should not be mocked
+                bool shouldBeMocked = CheckIfTheMethodShouldBeMocked(type, analyzedSolution, m, classUnderTestType);
 
-                // randomly generate method parameters
-                var methodParameters = m.GetParameters();
-                string parameters = "";
-                int j = 1;
-                foreach (ParameterInfo p in methodParameters)
+                if (shouldBeMocked)
                 {
-                    var separator = j == methodParameters.Count() ? "" : ", ";
-                    parameters += string.Format("It.IsAny<{0}>()", p.ParameterType) + separator;
-                    j++;
+                    // dynamically generate the code for a lamda expression
+                    var parameter = Expression.Parameter(type, "m");
+                    MethodInfo methodInfo = type.GetMethod(m.Name);
+
+                    // randomly generate method parameters
+                    var methodParameters = m.GetParameters();
+                    string parameters = "";
+                    int j = 1;
+                    foreach (ParameterInfo p in methodParameters)
+                    {
+                        var separator = j == methodParameters.Count() ? "" : ", ";
+                        parameters += string.Format("It.IsAny<{0}>()", p.ParameterType) + separator;
+                        j++;
+                    }
+
+                    var lambdaExpr = string.Format("m => m.{0}({1})", m.Name, parameters);
+                    var mockSetupMethod = new CodeMethodInvokeExpression(
+                        new CodeVariableReferenceExpression(string.Format("{0}Mock", type.Name)),
+                        "Setup", new CodeSnippetExpression(lambdaExpr));
+
+                    // resolve method return type
+                    var methodReturnType = m.ReturnType.Name;
+                    CodeExpression[] mockReturnMethodParameter = new CodeExpression[1];
+                    mockReturnMethodParameter[0] = new CodePrimitiveExpression(ResolveParameter(methodReturnType));
+
+                    var mockReturnMethod = new CodeMethodInvokeExpression(
+                        mockSetupMethod,
+                        "Returns", mockReturnMethodParameter);
+
+                    testClassConstructor.Statements.Add(mockReturnMethod);
                 }
-
-                var lambdaExpr = string.Format("m => m.{0}({1})", m.Name, parameters);
-                var mockSetupMethod = new CodeMethodInvokeExpression(
-                    new CodeVariableReferenceExpression(string.Format("{0}Mock", type.Name)),
-                    "Setup", new CodeSnippetExpression(lambdaExpr));
-
-                // resolve method return type
-                var methodReturnType = m.ReturnType.Name;
-                CodeExpression[] mockReturnMethodParameter = new CodeExpression[1];
-                mockReturnMethodParameter[0] = new CodePrimitiveExpression(ResolveParameter(methodReturnType));
-
-                var mockReturnMethod = new CodeMethodInvokeExpression(
-                    mockSetupMethod,
-                    "Returns", mockReturnMethodParameter);
-
-                testClassConstructor.Statements.Add(mockReturnMethod);
             }
+        }
+
+        private bool CheckIfTheMethodShouldBeMocked(Type type, AnalyzedSolution analyzedSolution, 
+            MethodInfo dependencyMethod, Type classUnerTestType)
+        {
+            foreach(AnalyzedProject proj in analyzedSolution.Projects)
+            {
+                if(proj.Name == selectedProjectName)
+                {
+                    foreach(Class cls in proj.Classes)
+                    {
+                        if(cls.Name == classUnerTestType.Name)
+                        {
+                            foreach(Method cutMethod in cls.Methods)
+                            {
+                                foreach(Statement stm in cutMethod.MethodBody.Statements)
+                                {
+                                    if (stm.Content.Contains(dependencyMethod.Name))
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void AddMockObjectInstantiationToConstructor(CodeConstructor testClassConstructor, string mockObjectName, string mockTypeName)
@@ -238,7 +511,9 @@ namespace ATOOS.VSExtension.TestGenerator
 
             targetClass.Members.Add(mockedObjectDeclaration);
         }
+        #endregion
 
+        #region Helpers region
         private CodeCompileUnit CreateCodeCompileUnit(string projectName, string typeName, CodeTypeDeclaration targetClass)
         {
             CodeCompileUnit codeUnit = new CodeCompileUnit();
@@ -255,73 +530,13 @@ namespace ATOOS.VSExtension.TestGenerator
 
             return codeUnit;
         }
-
-        private void AddTestIfResultIsNotNullTest(CodeTypeDeclaration targetClass, string methodName, CodeExpression[] methodParameters, Type targetType)
-        {
-            // generate test method name
-            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName);
-            
-            // ACT, create the method invocation statement
-            CodeExpression invokeMethodExpression = new CodeExpression();
-
-            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
-            var j = 0;
-            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
-            {
-                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
-                {
-                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                }
-                else
-                {
-                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
-                    ctorParams[j] = createObjectExpression;
-                }
-                j++;
-            }
-
-            CodeObjectCreateExpression mthodInvokeTargetObject =
-                new CodeObjectCreateExpression(targetType.FullName, ctorParams);
-
-            invokeMethodExpression = new CodeMethodInvokeExpression(
-                    mthodInvokeTargetObject,  // targetObject that contains the method to invoke.
-                    methodName,              // methodName indicates the method to invoke.
-                    methodParameters);      // parameters array contains the parameters for the method.
-
-            // declare result variable
-            CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
-                    typeof(object), "result", invokeMethodExpression);
-
-            
-            //CodeAssignStatement assignMethodInvocatonResult = new CodeAssignStatement(
-            //    new CodeVariableReferenceExpression("result"), invokeMethodExpression);
-
-
-            // ASSERT, create the result not null assertion statement
-            CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
-            CodeExpression[] assertNotNullParameters = new CodeExpression[1];
-            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result");// assignMethodInvocatonResult.Left;
-            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
-                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
-                    "NotNull",                                // methodName indicates the method to invoke.
-                    assertNotNullParameters);                // parameters array contains the parameters for the method.
-
-
-            // add the above created expressions to the testMethod
-            //testMethod.Statements.Add(variableDeclaration);
-            testMethod.Statements.Add(assignMethodInvocatonResult);
-            testMethod.Statements.Add(assertNotNullStatement);
-
-            targetClass.Members.Add(testMethod);
-        }
-
-        private CodeMemberMethod CreateTestMethodSignature(string methodName)
+        
+        private CodeMemberMethod CreateTestMethodSignature(string methodName, string unitTestType)
         {
             CodeMemberMethod testMethod = new CodeMemberMethod
             {
                 Attributes = MemberAttributes.Public,
-                Name = string.Format("{0}_{1}_{2}", methodName, "RandomInput", "NotNullResult"),
+                Name = string.Format("{0}_{1}_{2}", methodName, "RandomInput", unitTestType),
                 ReturnType = new CodeTypeReference(typeof(void)),
                 CustomAttributes =
                 {
@@ -334,9 +549,9 @@ namespace ATOOS.VSExtension.TestGenerator
 
             return testMethod;
         }
+        #endregion
 
-        #region Private functionality
-
+        #region Type resolving region
         private CodeObjectCreateExpression CreateCustomType(string typeToResolve)
         {
             Type typeToResolveInfo = _assemblyExportedTypes.Where(aet => aet.Name == typeToResolve).FirstOrDefault();

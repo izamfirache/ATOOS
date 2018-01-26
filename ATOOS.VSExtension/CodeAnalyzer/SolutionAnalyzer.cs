@@ -62,6 +62,8 @@ namespace ATOOS.VSExtension
                     foreach (var m in methods)
                     {
                         var methodParameters = new List<MethodParameter>();
+
+                        // add method's parameters
                         foreach (var mp in m.ParameterList.Parameters)
                         {
                             methodParameters.Add(new MethodParameter()
@@ -70,12 +72,27 @@ namespace ATOOS.VSExtension
                                 Type = mp.Type.ToString()
                             });
                         }
+
+                        // add method's body
+                        var methodBody = new Body();
+                        var index = 0;
+                        foreach (StatementSyntax statement in m.Body.Statements)
+                        {
+                            methodBody.Statements.Add(new Statement
+                            {
+                                Content = statement.ToString(),
+                                Position = index
+                            });
+                            index++;
+                        }
+
                         newClass.Methods.Add(new Method()
                         {
                             Accessor = m.Modifiers.First().ToString(),
                             ReturnType = m.ReturnType.ToString(),
                             Name = m.Identifier.ToString(),
-                            Parameters = methodParameters
+                            Parameters = methodParameters,
+                            MethodBody = methodBody
                         });
                     }
                     foreach (var a in attributes)

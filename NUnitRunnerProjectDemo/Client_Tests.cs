@@ -35,7 +35,8 @@ namespace NUnitRunnerProjectDemo
             var client = new Client("clientName", "clientSurname", 50, _employeeMock.Object);
             var result = client.GetAssociatedEmployeeInfo();
 
-            Assert.AreEqual(result, "Placeholder, the developer will insert the expected value here.");
+            // Please insert here the expected result
+            Assert.AreEqual(result, new object { });
         }
 
         [TestCase()]
