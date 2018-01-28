@@ -1,4 +1,5 @@
 ﻿using ATOOS.VSExtension.ATOOS.Core;
+using ATOOS.VSExtension.InputGenerators;
 using ATOOS.VSExtension.ObjectFactory;
 using Microsoft.CodeDom.Providers.DotNetCompilerPlatform;
 using Moq;
@@ -23,8 +24,10 @@ namespace ATOOS.VSExtension.TestGenerator
         private string _packagesFolder;
         private Type[] _assemblyExportedTypes = new Type[100];
         private string selectedProjectName;
+        InputParamGenerator inputParamGenerator;
 
-        public UnitTestGenerator(string generatedTestClassesDirectory, string packagesFolder, string selectedProjectName)
+        public UnitTestGenerator(string generatedTestClassesDirectory, string packagesFolder, 
+            string selectedProjectName)
         {
             _generatedTestClassesDirectory = generatedTestClassesDirectory;
             _packagesFolder = packagesFolder;
@@ -46,6 +49,7 @@ namespace ATOOS.VSExtension.TestGenerator
                 {
                     var assembly = Assembly.LoadFile(proj.OutputFilePath);
                     _assemblyExportedTypes = assembly.GetExportedTypes();
+                    inputParamGenerator = new InputParamGenerator(_assemblyExportedTypes);
 
                     foreach (Type type in _assemblyExportedTypes)
                     {
@@ -83,11 +87,13 @@ namespace ATOOS.VSExtension.TestGenerator
                                     // TODO: Rethink this !!!
                                     if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
                                     {
-                                        parameters[j] = new CodePrimitiveExpression(ResolveParameter(p.ParameterType.Name));
+                                        parameters[j] = new CodePrimitiveExpression(
+                                            inputParamGenerator.ResolveParameter(p.ParameterType.Name));
                                     }
                                     else
                                     {
-                                        CodeObjectCreateExpression createObjectExpression = CreateCustomType(p.ParameterType.Name);
+                                        CodeObjectCreateExpression createObjectExpression =
+                                            inputParamGenerator.CreateCustomType(p.ParameterType.Name);
                                         parameters[j] = createObjectExpression;
                                     }
                                     j++;
@@ -127,7 +133,6 @@ namespace ATOOS.VSExtension.TestGenerator
             return generatedTestClasses;
         }
 
-        #region Unit test generation region
         private void AddTestTheResultShouldbeTheExpectedOne(CodeTypeDeclaration targetClass, string methodName, 
             CodeExpression[] methodParameters, Type targetType)
         {
@@ -137,30 +142,13 @@ namespace ATOOS.VSExtension.TestGenerator
             // ACT, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
 
-            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
-            var j = 0;
-            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
-            {
-                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
-                {
-                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                }
-                else
-                {
-                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+            var targetTypeConstrucor = targetType.GetConstructors()
+                .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
 
-                    // declare the resolved parameter
-                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
-                        new CodeVariableDeclarationStatement(
-                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
-
-                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
-
-                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
-                }
-                j++;
-            }
+            CodeExpression[] ctorParams = inputParamGenerator.ResolveInputParametersForCtorOrMethod(
+                targetTypeConstrucor.GetParameters().Length,
+                targetTypeConstrucor.GetParameters(),
+                testMethod);
 
             CodeObjectCreateExpression mthodInvokeTargetObject =
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
@@ -214,30 +202,13 @@ namespace ATOOS.VSExtension.TestGenerator
             // ACT, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
 
-            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
-            var j = 0;
-            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
-            {
-                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
-                {
-                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                }
-                else
-                {
-                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+            var targetTypeConstrucor = targetType.GetConstructors()
+                .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
 
-                    // declare the resolved parameter
-                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
-                        new CodeVariableDeclarationStatement(
-                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
-
-                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
-
-                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
-                }
-                j++;
-            }
+            CodeExpression[] ctorParams = inputParamGenerator.ResolveInputParametersForCtorOrMethod(
+                targetTypeConstrucor.GetParameters().Length,
+                targetTypeConstrucor.GetParameters(),
+                testMethod);
 
             // create the target object
             CodeObjectCreateExpression createTargetObjectExpression =
@@ -282,30 +253,13 @@ namespace ATOOS.VSExtension.TestGenerator
             // ACT, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
 
-            var targetTypeConstrucor = targetType.GetConstructors().Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-            CodeExpression[] ctorParams = new CodeExpression[targetTypeConstrucor.GetParameters().Length];
-            var j = 0;
-            foreach (ParameterInfo pi in targetTypeConstrucor.GetParameters())
-            {
-                if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
-                {
-                    ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                }
-                else
-                {
-                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+            var targetTypeConstrucor = targetType.GetConstructors()
+                .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
 
-                    // declare the resolved parameter
-                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
-                        new CodeVariableDeclarationStatement(
-                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
-
-                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
-
-                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
-                }
-                j++;
-            }
+            CodeExpression[] ctorParams = inputParamGenerator.ResolveInputParametersForCtorOrMethod(
+                targetTypeConstrucor.GetParameters().Length, 
+                targetTypeConstrucor.GetParameters(),
+                testMethod);
 
             CodeObjectCreateExpression mthodInvokeTargetObject =
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
@@ -343,9 +297,7 @@ namespace ATOOS.VSExtension.TestGenerator
 
             targetClass.Members.Add(testMethod);
         }
-        #endregion
 
-        #region Constructor generation region
         private void AddTestClassConstructor(string constructorName, CodeTypeDeclaration targetClass, 
             Type type, AnalyzedSolution analyzedSolution)
         {
@@ -451,7 +403,8 @@ namespace ATOOS.VSExtension.TestGenerator
                     // resolve method return type
                     var methodReturnType = m.ReturnType.Name;
                     CodeExpression[] mockReturnMethodParameter = new CodeExpression[1];
-                    mockReturnMethodParameter[0] = new CodePrimitiveExpression(ResolveParameter(methodReturnType));
+                    mockReturnMethodParameter[0] = new CodePrimitiveExpression(
+                        inputParamGenerator.ResolveParameter(methodReturnType));
 
                     var mockReturnMethod = new CodeMethodInvokeExpression(
                         mockSetupMethod,
@@ -511,9 +464,7 @@ namespace ATOOS.VSExtension.TestGenerator
 
             targetClass.Members.Add(mockedObjectDeclaration);
         }
-        #endregion
 
-        #region Helpers region
         private CodeCompileUnit CreateCodeCompileUnit(string projectName, string typeName, CodeTypeDeclaration targetClass)
         {
             CodeCompileUnit codeUnit = new CodeCompileUnit();
@@ -549,97 +500,5 @@ namespace ATOOS.VSExtension.TestGenerator
 
             return testMethod;
         }
-        #endregion
-
-        #region Type resolving region
-        private CodeObjectCreateExpression CreateCustomType(string typeToResolve)
-        {
-            Type typeToResolveInfo = _assemblyExportedTypes.Where(aet => aet.Name == typeToResolve).FirstOrDefault();
-
-            if (typeToResolveInfo != null)
-            {
-                if (typeToResolveInfo.IsClass)
-                {
-                    var typeToResolveConstructor = typeToResolveInfo.GetConstructors()
-                        .Where(c => c.GetParameters().Length != 0).FirstOrDefault();
-
-                    CodeExpression[] ctorParams = new CodeExpression[typeToResolveConstructor.GetParameters().Length];
-                    var j = 0;
-                    foreach (ParameterInfo pi in typeToResolveConstructor.GetParameters())
-                    {
-                        if (pi.ParameterType.Name == "String" || pi.ParameterType.Name == "Int32")
-                        {
-                            ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                        }
-                        else
-                        {
-                            CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
-                            ctorParams[j] = createObjectExpression;
-                        }
-                        //ctorParams[j] = new CodePrimitiveExpression(ResolveParameter(pi.ParameterType.Name));
-                        j++;
-                    }
-
-                    CodeObjectCreateExpression objectCreationExpression =
-                        new CodeObjectCreateExpression(typeToResolveInfo.FullName, ctorParams);
-
-                    return objectCreationExpression;
-                }
-                else //if(typeToResolveInfo.IsInterface)
-                {
-                    // interface -- find all exported types that implement that interface
-                    List<Type> interfaceTypes = (from t in _assemblyExportedTypes
-                                         where !t.IsInterface && !t.IsAbstract
-                                         where typeToResolveInfo.IsAssignableFrom(t)
-                                         select t).ToList();
-
-                    if (interfaceTypes.Count != 0)
-                    {
-                        return CreateCustomType(interfaceTypes.FirstOrDefault().Name);
-                    }
-                    else
-                    {
-                        throw new Exception(string.Format("Can not find a type that implements : ", typeToResolve));
-                    }
-                }
-            }
-            else
-            {
-                throw new Exception(string.Format("Can not resolve type : ", typeToResolve));
-            }
-        }
-
-        private object ResolveParameter(string typeToResolve)
-        {
-            switch (typeToResolve)
-            {
-                case "String":
-                    return GetRandomString();
-                case "Int32":
-                    return GetRandomInteger();
-                default: throw new Exception(string.Format("Can not resolve type : ", typeToResolve));
-            }
-        }
-
-        private int GetRandomInteger()
-        {
-            Random rnd = new Random();
-            return rnd.Next(0, 10000);
-        }
-
-        private string GetRandomString()
-        {
-            const string pool = "abcdefghijklmnopqrstuvwxyz0123456789";
-            var builder = new StringBuilder();
-            Random rnd = new Random();
-
-            for (var i = 0; i < 10; i++) // harcoded length for now
-            {
-                var c = pool[rnd.Next(0, pool.Length)];
-                builder.Append(c);
-            }
-            return builder.ToString();
-        }
-        #endregion
     }
 }
