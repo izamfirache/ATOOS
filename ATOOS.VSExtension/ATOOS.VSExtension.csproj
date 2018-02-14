@@ -74,6 +74,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CodeAnalyzer\SolutionAnalyzer.cs" />
     <Compile Include="TestGenerator\CompilerHelper.cs" />
+    <Compile Include="TestGenerator\CUT_AddTestMethod.cs" />
+    <Compile Include="TestGenerator\CUT_AddConstructor.cs" />
     <Compile Include="TestGenerator\UnitTestGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
