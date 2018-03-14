@@ -7,5 +7,6 @@ Tasks performed automatically: unit test boilerplate code, mocking external depe
 add basic unit tests which assert if no exception was thrown on a specific call.
 
 ATOOS.VSExtension.sln -- the functionality wrapped in a VS extension.
+
 ATOOS.sln -- the functionality wrapped in a WPF application.
 
