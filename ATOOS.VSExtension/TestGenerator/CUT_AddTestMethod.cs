@@ -94,6 +94,18 @@ namespace ATOOS.VSExtension.TestGenerator
             // add the above created expressions to the testMethod
             testMethod.Statements.Add(shouldNotThrowExceptionExpression);
 
+            // create the insert expected value assertion statement
+            CodeExpressionStatement expectedValuePlaceholderStatement = new CodeExpressionStatement();
+            CodeExpression[] expectedValuePlaceholderParameters = new CodeExpression[2];
+            expectedValuePlaceholderParameters[0] = new CodeVariableReferenceExpression("result");
+            expectedValuePlaceholderParameters[1] = new CodePrimitiveExpression("Insert expected value here.");
+            expectedValuePlaceholderStatement.Expression = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
+                    "AreEqual",                                // methodName indicates the method to invoke.
+                    expectedValuePlaceholderParameters);       // parameters array contains the parameters for the method.
+
+            testMethod.Statements.Add(expectedValuePlaceholderStatement);
+
             targetClass.Members.Add(testMethod);
         }
 
