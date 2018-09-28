@@ -115,7 +115,7 @@ namespace ATOOS.VSExtension
                 CreateUnitTestProject(dte, unitTestProjectName);
                 
                 string packagesPath = GetSolutionPackagesFolder(dte);
-                InstallNeededNugetPackage(packagesPath);
+                //InstallNeededNugetPackage(packagesPath);
 
                 AddNeededReferencesToProject(dte, unitTestProjectName, packagesPath);
                 var projectPath = string.Format(@"{0}\\{1}", GetSolutionPath(dte), unitTestProjectName);
@@ -146,11 +146,11 @@ namespace ATOOS.VSExtension
                     var vsProject = proj.Object as VSLangProj.VSProject;
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
-                        "NUnit.3.9.0\\lib\\net45\\nunit.framework.dll"));
+                        "NUnit.3.10.1\\lib\\net45\\nunit.framework.dll"));
 
                     vsProject.References.Add(string.Format("{0}\\{1}",
                         packagesPath,
-                        "Moq.4.8.1\\lib\\net45\\Moq.dll")); // TODO: use regular expressions here for versioning
+                        "Moq.4.10.0\\lib\\net45\\Moq.dll")); // TODO: use regular expressions here for versioning
 
                     //var systemCoreDllPath = typeof(System.Linq.Enumerable).Assembly.Location;
                     //vsProject.References.Add(systemCoreDllPath);

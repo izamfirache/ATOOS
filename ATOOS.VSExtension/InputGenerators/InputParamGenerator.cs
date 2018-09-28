@@ -42,16 +42,17 @@ namespace ATOOS.VSExtension.InputGenerators
                 }
                 else
                 {
-                    CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
+                    ctorParams[j] = CreateCustomType(pi.ParameterType.Name);
+                    //CodeObjectCreateExpression createObjectExpression = CreateCustomType(pi.ParameterType.Name);
 
-                    // declare the resolved parameter
-                    CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
-                        new CodeVariableDeclarationStatement(
-                            pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
+                    //// declare the resolved parameter
+                    //CodeVariableDeclarationStatement assignResolveCustomParamToVariable =
+                    //    new CodeVariableDeclarationStatement(
+                    //        pi.ParameterType, pi.ParameterType.Name.ToLower(), createObjectExpression);
 
-                    testMethod.Statements.Add(assignResolveCustomParamToVariable);
+                    //testMethod.Statements.Add(assignResolveCustomParamToVariable);
 
-                    ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
+                    //ctorParams[j] = new CodeVariableReferenceExpression(pi.ParameterType.Name.ToLower());
                 }
                 j++;
             }

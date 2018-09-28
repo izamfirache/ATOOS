@@ -37,7 +37,7 @@ namespace ATOOS.VSExtension.TestGenerator
                 targetTypeConstrucor.GetParameters().Length,
                 targetTypeConstrucor.GetParameters(),
                 testMethod);
-
+            
             // create the target object
             CodeObjectCreateExpression createTargetObjectExpression =
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
@@ -46,6 +46,8 @@ namespace ATOOS.VSExtension.TestGenerator
             var targetObjectVariableName = targetType.Name.ToLower();
             CodeVariableDeclarationStatement assignMethodInvocatonResult = new CodeVariableDeclarationStatement(
                     targetType, targetObjectVariableName, createTargetObjectExpression);
+
+            testMethod.Statements.Add(assignMethodInvocatonResult);
 
             // create the method invocation expression using the above created targetObject
             invokeMethodExpression = new CodeMethodInvokeExpression(
@@ -90,7 +92,6 @@ namespace ATOOS.VSExtension.TestGenerator
                 new CodeSnippetExpression(lambdaExpr));
 
             // add the above created expressions to the testMethod
-            testMethod.Statements.Add(assignMethodInvocatonResult);
             testMethod.Statements.Add(shouldNotThrowExceptionExpression);
 
             targetClass.Members.Add(testMethod);
