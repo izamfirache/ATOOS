@@ -26,7 +26,8 @@ namespace ATOOS.VSExtension.TestGenerator
             this.selectedProjectName = selectedProjectName;
         }
 
-        public List<string> GenerateUnitTestsForClass(string solutionPath, string generatedUnitTestProject)
+        public List<string> GenerateUnitTestsForClass(string solutionPath, 
+            string generatedUnitTestProject, List<string> projClasses)
         {
             List<string> generatedTestClasses = new List<string>();
 
@@ -45,68 +46,70 @@ namespace ATOOS.VSExtension.TestGenerator
 
                     foreach (Type type in _assemblyExportedTypes)
                     {
-                        if (!type.IsInterface) // don't want to write unit tests for interfaces
+                        if (projClasses.Any(pc => pc == type.Name))
                         {
-                            // create a class
-                            CodeTypeDeclaration targetClass = new CodeTypeDeclaration
-                                (string.Format("{0}UnitTestsClass", type.Name))
+                            if (!type.IsInterface) // don't want to write unit tests for interfaces
+                            {
+                                // create a class
+                                CodeTypeDeclaration targetClass = new CodeTypeDeclaration
+                                    (string.Format("{0}UnitTestsClass", type.Name))
                                 {
                                     IsClass = true,
                                     TypeAttributes = TypeAttributes.Public
                                 };
 
-                            // create a code unit (the in-memory representation of a class)
-                            CodeCompileUnit codeUnit = CreateCodeCompileUnit(proj.Name, type.Name, targetClass);
-                            string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
+                                // create a code unit (the in-memory representation of a class)
+                                CodeCompileUnit codeUnit = CreateCodeCompileUnit(proj.Name, type.Name, targetClass);
+                                string classSourceName = string.Format("{0}UnitTestsClass.cs", type.Name);
 
-                            // generate the constructor for the unit test class in which all the 
-                            // external dependencies/calls will be mocked
-                            var cut_ConstructorGenerator = new CUT_AddConstructor(inputParamGenerator, selectedProjectName);
-                            cut_ConstructorGenerator.AddTestClassConstructor(classSourceName, targetClass, type, analyedSolution);
+                                // generate the constructor for the unit test class in which all the 
+                                // external dependencies/calls will be mocked
+                                var cut_ConstructorGenerator = new CUT_AddConstructor(inputParamGenerator, selectedProjectName);
+                                cut_ConstructorGenerator.AddTestClassConstructor(classSourceName, targetClass, type, analyedSolution);
 
-                            // generate a unit test for each method
-                            // the method will be called and a NotNull assertion will be added
-                            var methods = type.GetMethods(BindingFlags.Public 
-                                | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                                // generate a unit test for each method
+                                // the method will be called and a NotNull assertion will be added
+                                var methods = type.GetMethods(BindingFlags.Public
+                                    | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
-                            foreach (MethodInfo m in methods)
-                            {
-                                // randomly generate method parameters
-                                var methodParameters = m.GetParameters();
-                                CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
-                                int j = 0;
-                                foreach (ParameterInfo p in methodParameters)
+                                foreach (MethodInfo m in methods)
                                 {
-                                    // TODO: Rethink this !!!
-                                    if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                                    // randomly generate method parameters
+                                    var methodParameters = m.GetParameters();
+                                    CodeExpression[] parameters = new CodeExpression[methodParameters.Length];
+                                    int j = 0;
+                                    foreach (ParameterInfo p in methodParameters)
                                     {
-                                        parameters[j] = new CodePrimitiveExpression(
-                                            inputParamGenerator.ResolveParameter(p.ParameterType.Name));
+                                        // TODO: Rethink this !!!
+                                        if (p.ParameterType.Name == "String" || p.ParameterType.Name == "Int32")
+                                        {
+                                            parameters[j] = new CodePrimitiveExpression(
+                                                inputParamGenerator.ResolveParameter(p.ParameterType.Name));
+                                        }
+                                        else
+                                        {
+                                            CodeObjectCreateExpression createObjectExpression =
+                                                inputParamGenerator.CreateCustomType(p.ParameterType.Name);
+                                            parameters[j] = createObjectExpression;
+                                        }
+                                        j++;
                                     }
-                                    else
-                                    {
-                                        CodeObjectCreateExpression createObjectExpression =
-                                            inputParamGenerator.CreateCustomType(p.ParameterType.Name);
-                                        parameters[j] = createObjectExpression;
-                                    }
-                                    j++;
+
+                                    var cut_addTestMethod = new CUT_AddTestMethod(inputParamGenerator);
+
+                                    // Assert.NotNull(result);
+                                    // Assert.NotThrow(() => targetObj.SomePublicMethod())
+                                    cut_addTestMethod.AddTestMethod_ShouldNotThrowException_ResultShouldNotBeNull(targetClass, m.Name, parameters, type);
+
+                                    // Assert.AreEqual(result, new object { });
+                                    //AddTestTheResultShouldbeTheExpectedOne(targetClass, m.Name, parameters, type);
                                 }
 
-                                var cut_addTestMethod = new CUT_AddTestMethod(inputParamGenerator);
+                                // generate the c# code based on the created code unit
+                                string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
 
-                                // Assert.NotNull(result);
-                                // Assert.NotThrow(() => targetObj.SomePublicMethod())
-                                cut_addTestMethod.AddTestMethod_ShouldNotThrowException_ResultShouldNotBeNull(targetClass, m.Name, parameters, type);
-
-                                // Assert.AreEqual(result, new object { });
-                                //AddTestTheResultShouldbeTheExpectedOne(targetClass, m.Name, parameters, type);
-                            }
-
-                            // generate the c# code based on the created code unit
-                            string generatedTestClassPath = compileHelper.GenerateCSharpCode(codeUnit, classSourceName);
-
-                            // compile the above generated code into a DLL/EXE
-                            bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
+                                // compile the above generated code into a DLL/EXE
+                                bool isGeneratedClassCompiled = compileHelper.CompileAsDLL(classSourceName, new List<string>()
                             {
                                 string.Format("{0}\\{1}", _packagesFolder, "NUnit.3.10.1\\lib\\net45\\nunit.framework.dll"),
                                 string.Format("{0}\\{1}", _packagesFolder, "Moq.4.10.0\\lib\\net45\\Moq.dll"),
@@ -114,9 +117,10 @@ namespace ATOOS.VSExtension.TestGenerator
                                 typeof(System.Linq.Enumerable).Assembly.Location
                             });
 
-                            if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
-                            {
-                                generatedTestClasses.Add(generatedTestClassPath);
+                                if (!string.IsNullOrEmpty(generatedTestClassPath) && isGeneratedClassCompiled)
+                                {
+                                    generatedTestClasses.Add(generatedTestClassPath);
+                                }
                             }
                         }
                     }

@@ -16,19 +16,20 @@ namespace ATOOS.VSExtension
     {
         private string _pathToSolution;
         private AnalyzedSolution _analyzedSolution;
+        private MSBuildWorkspace _workspace;
 
         public SolutionAnalyzer(string pathToSolution)
         {
             _pathToSolution = pathToSolution;
             _analyzedSolution = new AnalyzedSolution();
+            _workspace = CreateWorkspace();
         }
 
         public AnalyzedSolution AnalyzeSolution()
         {
             //var analyzedSolution = new AnalyzedSolution();
             var basicMetricsProvider = new BasicMetricsProvider();
-            var workspace = CreateWorkspace();
-            var solutionToAnalyze = GetSolutionToAnalyze(workspace, _pathToSolution);
+            var solutionToAnalyze = GetSolutionToAnalyze(_workspace, _pathToSolution);
             foreach (Project proj in solutionToAnalyze.Projects)
             {
                 var analyzedProject = new AnalyzedProject();
@@ -121,6 +122,12 @@ namespace ATOOS.VSExtension
 
             return _analyzedSolution;
         }
+
+        //public List<string> GetProjectClasses(string projectName)
+        //{
+        //    var solutionToAnalyze = GetSolutionToAnalyze(_workspace, _pathToSolution);
+        //    var project = GetProjectToAnalyze(solutionToAnalyze, projectName);
+        //}
 
         private MSBuildWorkspace CreateWorkspace()
         {

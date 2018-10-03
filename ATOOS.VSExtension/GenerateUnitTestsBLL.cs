@@ -1,104 +1,102 @@
-﻿using System;
-using System.ComponentModel.Design;
-using System.Globalization;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
-using EnvDTE80;
-using EnvDTE;
-using System.Windows.Forms;
-using NuGet;
-using ATOOS.VSExtension.ObjectFactory;
+﻿using ATOOS.VSExtension.ATOOS.Core;
 using ATOOS.VSExtension.TestGenerator;
+using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
+using NuGet;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Forms;
 
 namespace ATOOS.VSExtension
 {
-    internal sealed class GenerateUnitTestsCommand
+    public class GenerateUnitTestsBLL
     {
-        public const int CommandId = 0x0100;
-        
-        public static readonly Guid CommandSet = new Guid("4210003b-22d4-4404-bca8-38abaa597829");
-        
-        private readonly Package package;
-        
-        private GenerateUnitTestsCommand(Package package)
+        public void GenerateUnitTestsLogic(List<string> projClasses)
         {
-            if (package == null)
+            //List<string> projClasses = DiscoverProjectClasses();
+            //try
+            //{
+            var dte = (DTE2)Microsoft.VisualStudio.Shell.ServiceProvider
+                    .GlobalProvider.GetService(typeof(EnvDTE.DTE));
+            var selectedProjectName = GetSelectedProjectName(dte);
+            var unitTestProjectName = string.Format("{0}_Tests", selectedProjectName);
+
+            // discover solution/project types and create an object factory
+            var solutionFullPath = GetSolutionFullPath(dte);
+
+            // generate unit tests for the analyzed project
+            var generatedTestClassesDirectory = CreateUnitTestsProject(dte, unitTestProjectName);
+            string packagesPath = GetSolutionPackagesFolder(dte);
+
+            var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory,
+                packagesPath, selectedProjectName);
+            List<string> testClasses = 
+                unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, 
+                unitTestProjectName, projClasses);
+
+            // add test classes to project
+            string csprojPath = string.Format(@"{0}\\{1}\\{2}{3}", GetSolutionPath(dte),
+                unitTestProjectName, unitTestProjectName, ".csproj");
+
+            var p = new Microsoft.Build.Evaluation.Project(csprojPath);
+            foreach (string generatedTestClass in testClasses)
             {
-                throw new ArgumentNullException("package");
+                p.AddItem("Compile", generatedTestClass);
+            }
+            p.Save();
+        }
+
+        public List<ProjectObj> DiscoverProjectClasses()
+        {
+            var projects = new List<ProjectObj>();
+
+            // get the DTE reference...
+            var dte = (DTE2)Microsoft.VisualStudio.Shell.ServiceProvider
+                    .GlobalProvider.GetService(typeof(EnvDTE.DTE));
+
+            // get the solution
+            Solution solution = dte.Solution;
+            Console.WriteLine(solution.FullName);
+
+            // get all the projects
+            foreach (Project project in solution.Projects)
+            {
+                var proj = new ProjectObj()
+                {
+                    Name = project.Name
+                };
+
+                // get all the items in each project
+                foreach (ProjectItem item in project.ProjectItems)
+                {
+                    FileCodeModel2 model = (FileCodeModel2)item.FileCodeModel;
+                    if (model != null)
+                    {
+                        foreach (CodeElement codeElement in model.CodeElements)
+                        {
+                            if (codeElement.Kind == vsCMElement.vsCMElementNamespace)
+                            {
+                                foreach (CodeElement ce in codeElement.Children)
+                                {
+                                    if (ce.Kind == vsCMElement.vsCMElementClass)
+                                    {
+                                        proj.Classes.Add(new ProjectClass() { Name = item.Name.Replace(".cs", "") });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                projects.Add(proj);
             }
 
-            this.package = package;
-
-            OleMenuCommandService commandService = this.ServiceProvider.GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            if (commandService != null)
-            {
-                var menuCommandID = new CommandID(CommandSet, CommandId);
-                var menuItem = new MenuCommand(this.MenuItemCallback, menuCommandID);
-                commandService.AddCommand(menuItem);
-            }
-        }
-
-        public static GenerateUnitTestsCommand Instance
-        {
-            get;
-            private set;
-        }
-
-        private IServiceProvider ServiceProvider
-        {
-            get
-            {
-                return this.package;
-            }
-        }
-        
-        public static void Initialize(Package package)
-        {
-            Instance = new GenerateUnitTestsCommand(package);
-        }
-
-        private void MenuItemCallback(object sender, EventArgs e)
-        {
-            ////try
-            ////{
-            //    var dte = (DTE2)ServiceProvider.GetService(typeof(DTE));
-            //    var selectedProjectName = GetSelectedProjectName(dte);
-            //    var unitTestProjectName = string.Format("{0}_Tests", selectedProjectName);
-
-            //    // discover solution/project types and create an object factory
-            //    var solutionFullPath = GetSolutionFullPath(dte);
-
-            //    // generate unit tests for the analyzed project
-            //    var generatedTestClassesDirectory = CreateUnitTestsProject(dte, unitTestProjectName);
-            //    string packagesPath = GetSolutionPackagesFolder(dte);
-
-            //    var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory,
-            //        packagesPath, selectedProjectName);
-            //    List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, 
-            //        unitTestProjectName);
-
-            //    // add test classes to project
-            //    string csprojPath = string.Format(@"{0}\\{1}\\{2}{3}", GetSolutionPath(dte),
-            //        unitTestProjectName, unitTestProjectName, ".csproj");
-
-            //    var p = new Microsoft.Build.Evaluation.Project(csprojPath);
-            //    foreach (string generatedTestClass in testClasses)
-            //    {
-            //        p.AddItem("Compile", generatedTestClass);
-            //    }
-            //    p.Save();
-            ////}
-            ////catch (Exception ex)
-            ////{
-            ////    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            ////}
-
-            MessageBox.Show("Unit test project created. Please install the NUnit3TestAdapter nuget " +
-                    "package manually on the created project, reload/build solution and run the generated unit tests " +
-                    "in the Unit Test Explorer window.", "Unit Test setup done", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return projects;
         }
 
         private string GetSelectedProjectName(DTE2 dte)
@@ -114,7 +112,7 @@ namespace ATOOS.VSExtension
             try
             {
                 CreateUnitTestProject(dte, unitTestProjectName);
-                
+
                 string packagesPath = GetSolutionPackagesFolder(dte);
                 //InstallNeededNugetPackage(packagesPath);
 
@@ -124,7 +122,7 @@ namespace ATOOS.VSExtension
             }
             catch (Exception ex)
             {
-                MessageBox.Show("ERROR: " + ex.Message);
+                System.Windows.Forms.MessageBox.Show("ERROR: " + ex.Message);
                 throw ex;
             }
         }
@@ -155,7 +153,7 @@ namespace ATOOS.VSExtension
 
                     //var systemCoreDllPath = typeof(System.Linq.Enumerable).Assembly.Location;
                     //vsProject.References.Add(systemCoreDllPath);
-                    
+
 
                     foreach (Project project in currentSolution.Projects)
                     {
@@ -170,7 +168,7 @@ namespace ATOOS.VSExtension
                             }
                             else
                             {
-                                MessageBox.Show("Please build the selected project and then create the unit test project.", 
+                                System.Windows.Forms.MessageBox.Show("Please build the selected project and then create the unit test project.",
                                     "Build selected project", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                                 // stop execution
@@ -240,7 +238,7 @@ namespace ATOOS.VSExtension
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                System.Windows.Forms.MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
