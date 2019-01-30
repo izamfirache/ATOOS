@@ -25,10 +25,10 @@ Steps to Run a Demo of this functionality:
   2. [[If you want to run this tool on your own source code project, skip this step]] In the solution, under the TestSourceProjects folder, move the ATOOSTestSourceCodeProject1 project in a new solution and save it locally on the disk.
   3. Start the ATOOS solution (with the UnitTestExtension as the StartupProject).
   4. In the new VS experimental instance that opened, open the source code project (your own or the test project configured at step 2, you need to select the .sln file).
-  5. When your solution is started (in the experimental VS instance), select the source code project (click on it), then go to View --> 
+  5. When your solution is started (in the experimental VS instance), open the source code project, then go to View --> 
 Other Windows --> TestGeneratorManager, if you click on it the ATOOS VS extension window will open.
   6. In the ATOOS VS extension window, select the projects/classes for which you want the unit tests to be generated.
   7. Press the 'Generate unit tests' button (make sure the source code project is selected at this step).
   8. [[Probably]] after a couple of seconds VS will ask you to reload the solution, reload it.
-    - this happens because a new project was added to the solution in the process, the unit test project.
+      - this happens because a new project was added to the solution in the process, the unit test project.
   9. Inspect the unit generated unit tests, run them from the Test Explorer window.
