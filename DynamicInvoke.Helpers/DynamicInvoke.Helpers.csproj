@@ -44,21 +44,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ATOOS.Core\ATOOS.Core.csproj">
-      <Project>{65B45E7D-8FCE-49A2-A991-5B86521E52E9}</Project>
-      <Name>ATOOS.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CodeAnalyzer\CodeAnalyzer.csproj">
-      <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
-      <Name>CodeAnalyzer</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ObjectFactory\ObjectFactory.csproj">
-      <Project>{0eacadb8-b848-4df0-bf51-ecade44eca08}</Project>
-      <Name>ObjectFactory</Name>
-    </ProjectReference>
+    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <ProjectReference Include="..\UnitTestExtension\UnitTestExtension.csproj">
+      <Project>{531500b8-cc6c-46a7-ad43-b7ab5f79ce68}</Project>
+      <Name>UnitTestExtension</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,7 +1,5 @@
 ﻿namespace UnitTestExtension
 {
-    using ATOOS.VSExtension;
-    using ATOOS.VSExtension.ATOOS.Core;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
@@ -9,6 +7,8 @@
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Media;
+    using UnitTestExtension.Models;
+    using UnitTestExtension.ViewModel;
 
     /// <summary>
     /// Interaction logic for TestGeneratorManagerControl.
@@ -21,7 +21,7 @@
         public TestGeneratorManagerControl()
         {
             this.InitializeComponent();
-            var unitTestManager = new GenerateUnitTestsBLL();
+            var unitTestManager = new TestGeneratorVM();
             solutionExplorer.ItemsSource = unitTestManager.DiscoverProjectClasses();
         }
 
@@ -34,7 +34,7 @@
         [SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:ElementMustBeginWithUpperCaseLetter", Justification = "Default event handler naming pattern")]
         private void button1_Click(object sender, RoutedEventArgs e)
         {
-            var unitTestManager = new GenerateUnitTestsBLL();
+            var unitTestManager = new TestGeneratorVM();
             List<string> selectedClasses = new List<string>();
 
             foreach(var item in solutionExplorer.Items)

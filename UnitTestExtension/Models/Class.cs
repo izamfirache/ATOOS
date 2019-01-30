@@ -4,19 +4,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ATOOS.Core.Models
+namespace UnitTestExtension.Models
 {
     public class Class
     {
         public Class()
         {
             Methods = new List<Method>();
-            Attributes = new List<Atribute>();
+            Attributes = new List<Attribute>();
         }
 
         public Constructor Constructor { get; set; }
         public string Name { get; set; }
         public List<Method> Methods { get; set; }
-        public List<Atribute> Attributes { get; set; }
+        public List<Attribute> Attributes { get; set; }
     }
 }

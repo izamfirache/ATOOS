@@ -1,12 +1,12 @@
-﻿using ATOOS.Core.Models;
-using CodeAnalyzer;
-using ObjectFactory;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using UnitTestExtension.CodeAnalyzer;
+using UnitTestExtension.Models;
+using UnitTestExtension.ObjectFactory;
 
 namespace DynamicInvoke.Helpers
 {
@@ -48,7 +48,7 @@ namespace DynamicInvoke.Helpers
                                 }
 
                                 // invoke the function
-                                _objectFactory._instances.TryGetValue(typeName, out object objectInstance);
+                                _objectFactory.Instances.TryGetValue(typeName, out object objectInstance);
                                 var result = m.Invoke(objectInstance, parameters.ToArray());
                                 return result;
                             }

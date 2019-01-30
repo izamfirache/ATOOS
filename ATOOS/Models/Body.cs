@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace ATOOS.Core.Models
+namespace ATOOS.Models
 {
     public class Body
     {

@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace ATOOS.Core.Models
+namespace UnitTestExtension.Models
 {
-    public class Atribute
+    public class ProjectClass
     {
         public string Name { get; set; }
-        public string Accessor { get; set; }
-        public string Type { get; set; }
+        public bool IsSelected { get; set; }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace ATOOS.Core.Models
+namespace ATOOS.Models
 {
     public class Constructor
     {

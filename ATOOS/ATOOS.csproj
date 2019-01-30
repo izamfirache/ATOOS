@@ -174,6 +174,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\AnalyzedProject.cs" />
+    <Compile Include="Models\AnalyzedSolution.cs" />
+    <Compile Include="Models\Atribute.cs" />
+    <Compile Include="Models\Body.cs" />
+    <Compile Include="Models\Class.cs" />
+    <Compile Include="Models\Constructor.cs" />
+    <Compile Include="Models\Method.cs" />
+    <Compile Include="Models\MethodParameter.cs" />
+    <Compile Include="Models\Statement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -202,25 +211,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ATOOS.Core\ATOOS.Core.csproj">
-      <Project>{65b45e7d-8fce-49a2-a991-5b86521e52e9}</Project>
-      <Name>ATOOS.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CodeAnalyzer\CodeAnalyzer.csproj">
-      <Project>{1d87a2b8-a35f-474f-ae00-6938ccd820a2}</Project>
-      <Name>CodeAnalyzer</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DynamicInvoke.Helpers\DynamicInvoke.Helpers.csproj">
       <Project>{453A3426-ECAA-4DFE-B2DC-6AD9C3D54C69}</Project>
       <Name>DynamicInvoke.Helpers</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ObjectFactory\ObjectFactory.csproj">
-      <Project>{0eacadb8-b848-4df0-bf51-ecade44eca08}</Project>
-      <Name>ObjectFactory</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\UnitTestGenerator\UnitTestGenerator.Core.csproj">
-      <Project>{f4c1a7a5-ad57-4440-9c75-9c54e1347b05}</Project>
-      <Name>UnitTestGenerator.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
