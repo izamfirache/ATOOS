@@ -40,7 +40,7 @@ namespace UnitTestExtension.TestGenerationUnits
             {
                 if (proj.Name != generatedUnitTestProject)
                 {
-                    var assembly = Assembly.LoadFile(proj.OutputFilePath);
+                    var assembly = Assembly.LoadFile(proj.OutputFilePath); //TODO: what if the assembly does not exist because the project is not compiled??
                     _assemblyExportedTypes = assembly.GetExportedTypes();
                     inputParamGenerator = new InputParamGenerator(_assemblyExportedTypes);
 
@@ -68,7 +68,7 @@ namespace UnitTestExtension.TestGenerationUnits
                                 cut_ConstructorGenerator.AddTestClassConstructor(classSourceName, targetClass, type, analyedSolution);
 
                                 // generate a unit test for each method
-                                // the method will be called and a NotNull assertion will be added
+                                // the method will be called and a Assert.NotNull assertion will be added
                                 var methods = type.GetMethods(BindingFlags.Public
                                     | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
@@ -99,10 +99,12 @@ namespace UnitTestExtension.TestGenerationUnits
 
                                     // Assert.NotNull(result);
                                     // Assert.NotThrow(() => targetObj.SomePublicMethod())
-                                    cut_addTestMethod.AddTestMethod_ShouldNotThrowException_ResultShouldNotBeNull(targetClass, m.Name, parameters, type);
+                                    cut_addTestMethod.AddTestMethod_ShouldNotThrowExceptionResultShouldNotBeNull(targetClass, m.Name, 
+                                        parameters, type, "CallShouldNotThrowExceptionAndResultShouldNotBeNull");
 
-                                    // Assert.AreEqual(result, new object { });
-                                    //AddTestTheResultShouldbeTheExpectedOne(targetClass, m.Name, parameters, type);
+                                    // Assert.AreEqual(result, "Insert expected value here.");
+                                    cut_addTestMethod.AddTestMethod_ExpectedResultPlaceholder(targetClass, m.Name,
+                                        parameters, type, "ResultShouldBeAsExpected");
                                 }
 
                                 // generate the c# code based on the created code unit

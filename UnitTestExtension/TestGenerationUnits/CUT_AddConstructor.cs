@@ -48,7 +48,7 @@ namespace UnitTestExtension.TestGenerationUnits
                         // - globally declare a mock object for each dependency to be mocked 
                         // example -- private Mock<ObjectToBeMocked> _objectMock;
 
-                        // mock each interface ???
+                        // TODO: mock each interface, the class can implement multiple interfaces ???
                         Dictionary<string, string> globallyDeclaredObjects = new Dictionary<string, string>();
                         foreach (Type implementedInterface in implementedInterfaces)
                         {
@@ -63,7 +63,7 @@ namespace UnitTestExtension.TestGenerationUnits
 
                             MockAllExternalDependencyMethods(implementedInterface, testClassConstructor, analyzedSolution, type);
 
-                            // - for each mocked method, generate a new unit test method in which to test the mocking logic
+                            // TODO: for each mocked method, generate a new unit test method in which to test the mocking logic
                         }
                     }
                 }

@@ -122,12 +122,6 @@ namespace UnitTestExtension.CodeAnalyzer
             return _analyzedSolution;
         }
 
-        //public List<string> GetProjectClasses(string projectName)
-        //{
-        //    var solutionToAnalyze = GetSolutionToAnalyze(_workspace, _pathToSolution);
-        //    var project = GetProjectToAnalyze(solutionToAnalyze, projectName);
-        //}
-
         private MSBuildWorkspace CreateWorkspace()
         {
             // start Roslyn workspace

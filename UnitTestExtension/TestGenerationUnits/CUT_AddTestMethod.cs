@@ -17,17 +17,62 @@ namespace UnitTestExtension.TestGenerationUnits
         {
             _inputParamGenerator = inputParamGenerator;
         }
-
-        public void AddTestMethod_ShouldNotThrowException_ResultShouldNotBeNull
+        
+        public void AddTestMethod_ShouldNotThrowExceptionResultShouldNotBeNull
             (CodeTypeDeclaration targetClass, 
             string methodName,
             CodeExpression[] methodParameters, 
-            Type targetType)
+            Type targetType,
+            string unitTestMethodName)
         {
             // generate test method name
-            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, "CallShouldNotThrowAnyException");
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, unitTestMethodName);
 
-            // ACT, create the method invocation statement
+            // build the ARRANGE and the ACT part
+            // create a CUT instance and call the method under test
+            string invokeMethodExpressionAsString = 
+                GenerateTheCodeToCallTheMethodUnderTestAndReturnTheInvocationAsString(targetType, testMethod, 
+                methodName, methodParameters);
+
+            // build the ASSERT part
+            // create the result not null assertion statement, add it to the unit test method
+            testMethod.Statements.Add(GetAssertNotNullStatement());
+
+            // create the assertion which will verify that no exception is thrown during execution, add it to the unit test method
+            testMethod.Statements.Add(GetAssertShouldNotThrowExceptionStatement(invokeMethodExpressionAsString));
+
+            // add the unit test method to the unit test class
+            targetClass.Members.Add(testMethod);
+        }
+
+        public void AddTestMethod_ExpectedResultPlaceholder
+            (CodeTypeDeclaration targetClass,
+            string methodName,
+            CodeExpression[] methodParameters,
+            Type targetType,
+            string unitTestMethodName)
+        {
+            // generate test method name
+            CodeMemberMethod testMethod = CreateTestMethodSignature(methodName, unitTestMethodName);
+
+            // build the ARRANGE and the ACT part
+            // create a CUT instance and call the method under test
+            string invokeMethodExpressionAsString =
+                GenerateTheCodeToCallTheMethodUnderTestAndReturnTheInvocationAsString(targetType, testMethod,
+                methodName, methodParameters);
+
+            // build the ASSERT part
+            // create the insert expected value assertion statement, add it to the unit test method
+            testMethod.Statements.Add(GetAssertExpectedValuePlaceHolderStatement());
+
+            // add the unit test method to the unit test class
+            targetClass.Members.Add(testMethod);
+        }
+
+        private string GenerateTheCodeToCallTheMethodUnderTestAndReturnTheInvocationAsString(Type targetType, 
+            CodeMemberMethod testMethod, string methodName, CodeExpression[] methodParameters)
+        {
+            // ARRANGE, ACT, create the method invocation statement
             CodeExpression invokeMethodExpression = new CodeExpression();
 
             var targetTypeConstrucor = targetType.GetConstructors()
@@ -37,7 +82,7 @@ namespace UnitTestExtension.TestGenerationUnits
                 targetTypeConstrucor.GetParameters().Length,
                 targetTypeConstrucor.GetParameters(),
                 testMethod);
-            
+
             // create the target object
             CodeObjectCreateExpression createTargetObjectExpression =
                 new CodeObjectCreateExpression(targetType.FullName, ctorParams);
@@ -59,8 +104,7 @@ namespace UnitTestExtension.TestGenerationUnits
             CSharpCodeProvider csProvider = new CSharpCodeProvider();
             csProvider.GenerateCodeFromExpression(invokeMethodExpression, writer, new CodeGeneratorOptions());
             string invokeMethodExpressionAsString = writer.ToString();
-
-            // ASSERT
+            
             invokeMethodExpression = new CodeMethodInvokeExpression(
                     // targetObject that contains the method to invoke.
                     new CodeVariableReferenceExpression(targetType.Name.ToLower()),
@@ -73,29 +117,12 @@ namespace UnitTestExtension.TestGenerationUnits
 
             testMethod.Statements.Add(assignMethodInvocatonResultForNotNull);
 
-            // create the result not null assertion statement
-            CodeExpressionStatement assertNotNullStatement = new CodeExpressionStatement();
-            CodeExpression[] assertNotNullParameters = new CodeExpression[1];
-            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result"); // assignMethodInvocatonResult.Left;
-            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
-                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
-                    "NotNull",                                // methodName indicates the method to invoke.
-                    assertNotNullParameters);                // parameters array contains the parameters for the method.
+            return invokeMethodExpressionAsString;
+        }
 
-            testMethod.Statements.Add(assertNotNullStatement);
-
-            // create the assertion which will verify that no exception is thrown during execution
-            var lambdaExpr = string.Format("() => {0}", invokeMethodExpressionAsString);
-            var shouldNotThrowExceptionExpression = new CodeMethodInvokeExpression(
-                new CodeTypeReferenceExpression("Assert"),
-                "DoesNotThrow",
-                new CodeSnippetExpression(lambdaExpr));
-
-            // add the above created expressions to the testMethod
-            testMethod.Statements.Add(shouldNotThrowExceptionExpression);
-
-            // create the insert expected value assertion statement
-            CodeExpressionStatement expectedValuePlaceholderStatement = new CodeExpressionStatement();
+        private CodeExpressionStatement GetAssertExpectedValuePlaceHolderStatement()
+        {
+            var expectedValuePlaceholderStatement = new CodeExpressionStatement();
             CodeExpression[] expectedValuePlaceholderParameters = new CodeExpression[2];
             expectedValuePlaceholderParameters[0] = new CodeVariableReferenceExpression("result");
             expectedValuePlaceholderParameters[1] = new CodePrimitiveExpression("Insert expected value here.");
@@ -104,9 +131,30 @@ namespace UnitTestExtension.TestGenerationUnits
                     "AreEqual",                                // methodName indicates the method to invoke.
                     expectedValuePlaceholderParameters);       // parameters array contains the parameters for the method.
 
-            testMethod.Statements.Add(expectedValuePlaceholderStatement);
+            return expectedValuePlaceholderStatement;
+        }
 
-            targetClass.Members.Add(testMethod);
+        private CodeMethodInvokeExpression GetAssertShouldNotThrowExceptionStatement(string invokeMethodExpressionAsString)
+        {
+            var lambdaExpr = string.Format("() => {0}", invokeMethodExpressionAsString);
+            var shouldNotThrowExceptionExpression = new CodeMethodInvokeExpression(
+                new CodeTypeReferenceExpression("Assert"),
+                "DoesNotThrow",
+                new CodeSnippetExpression(lambdaExpr));
+            return shouldNotThrowExceptionExpression;
+        }
+
+        private CodeExpressionStatement GetAssertNotNullStatement()
+        {
+            var assertNotNullStatement = new CodeExpressionStatement();
+            CodeExpression[] assertNotNullParameters = new CodeExpression[1];
+            assertNotNullParameters[0] = new CodeVariableReferenceExpression("result"); // assignMethodInvocatonResult.Left;
+            assertNotNullStatement.Expression = new CodeMethodInvokeExpression(
+                    new CodeTypeReferenceExpression("Assert"), // targetObject that contains the method to invoke.
+                    "NotNull",                                // methodName indicates the method to invoke.
+                    assertNotNullParameters);                // parameters array contains the parameters for the method.
+
+            return assertNotNullStatement;
         }
 
         #region Private Functionality

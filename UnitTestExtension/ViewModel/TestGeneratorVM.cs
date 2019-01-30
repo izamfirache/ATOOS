@@ -19,9 +19,6 @@ namespace UnitTestExtension.ViewModel
     {
         public void GenerateUnitTestsLogic(List<string> projClasses)
         {
-            //List<string> projClasses = DiscoverProjectClasses();
-            //try
-            //{
             var dte = (DTE2)Microsoft.VisualStudio.Shell.ServiceProvider
                     .GlobalProvider.GetService(typeof(EnvDTE.DTE));
             var selectedProjectName = GetSelectedProjectName(dte);
@@ -36,8 +33,7 @@ namespace UnitTestExtension.ViewModel
 
             var unitTestGenerator = new UnitTestGenerator(generatedTestClassesDirectory,
                 packagesPath, selectedProjectName);
-            List<string> testClasses = 
-                unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, 
+            List<string> testClasses = unitTestGenerator.GenerateUnitTestsForClass(solutionFullPath, 
                 unitTestProjectName, projClasses);
 
             // add test classes to project
@@ -56,7 +52,7 @@ namespace UnitTestExtension.ViewModel
         {
             var projects = new List<ProjectObj>();
 
-            // get the DTE reference...
+            // get the DTE reference
             var dte = (DTE2)Microsoft.VisualStudio.Shell.ServiceProvider
                     .GlobalProvider.GetService(typeof(EnvDTE.DTE));
 
