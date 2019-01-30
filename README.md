@@ -33,7 +33,7 @@ Other Windows --> TestGeneratorManager, if you click on it the ATOOS VS extensio
   7. Press the 'Generate unit tests' button (make sure the source code project is selected at this step).
   8. [[Probably]] after a couple of seconds VS will ask you to reload the solution, reload it.
       - this happens because a new project was added to the solution in the process, the unit test project.
-  9. [[Possible]] If you don't have the Moq and NUnit3TestAdapter (or xunit) packages installed, you will need them to discover the unit tests at build and run them after.
+  9. Install the Moq and NUnit3TestAdapter (or xunit) packages in the unit test project, you will need them to discover the unit tests at build and run them after.
       - these packages can be installed programatically after the unit test project is created, but this process is very slow, it is faster to add them manually, this will be fixed in the future versions.
       - if tests are failing with the 'Moq.DefaultValueProvider.get_Empty() - Could not load file or assembly 'System.Threading.Tasks.Extensions, Version=4.1.0.0'', please install the Moq.4.7.145 version and it will work, this will be fixed in the later versions of this tool.
   10. Inspect the generated unit tests in the unit test project, run them from the Test Explorer window.
